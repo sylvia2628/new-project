@@ -86,7 +86,12 @@
 - `POST /api/assets/upload-url`
 - `POST /api/drafts/generate`
 - `PATCH /api/drafts/:id/review`
-- `POST /api/drafts/:id/publish`（必須再次檢查管理者權限）
+- `POST /api/drafts/:id/publish`（已實作；必須為管理者且草稿狀態為 `approved`）
+- `GET /api/schedules`
+- `POST /api/schedules`
+- `PATCH /api/schedules/:id`
+- `GET /api/users`（管理者）
+- `PATCH /api/users/:id`（管理者可調整角色）
 
 ### AI 秘書
 

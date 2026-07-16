@@ -21,6 +21,10 @@ curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/me
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/customers
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/audit_logs
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/assistant/today
+curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/schedules
+curl -X POST http://127.0.0.1:8787/api/schedules \
+  -H 'Authorization: Bearer local-manager' -H 'Content-Type: application/json' \
+  -d '{"event_date":"2026-07-20","event_time":"10:00","title":"現場丈量","category":"site_visit"}'
 curl -X POST http://127.0.0.1:8787/api/drafts/generate \
   -H 'Authorization: Bearer local-manager' -H 'Content-Type: application/json' \
   -d '{"kind":"portfolio","channel":"instagram","source":{"name":"測試作品","style":"現代簡約","area":"高雄","idea":"改善採光與收納"}}'
@@ -29,6 +33,7 @@ curl -X POST http://127.0.0.1:8787/api/customers \
   -H 'Content-Type: application/json' \
   -d '{"name":"測試客戶","area":"高雄","status":"new"}'
 # DELETE /api/:resource/:id 僅管理者可用，避免一般角色誤刪資料。
+# 草稿必須先核准，且只有管理者可以發布：POST /api/drafts/:id/publish
 ```
 
 ## 安全限制

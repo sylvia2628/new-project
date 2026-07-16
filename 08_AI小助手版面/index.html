@@ -1045,6 +1045,7 @@
         <a href="#crm"><span class="icon">客</span>CRM</a>
         <a href="#cases"><span class="icon">案</span>案場管理</a>
         <a href="#tasks"><span class="icon">工</span>工作待辦</a>
+        <a href="#schedules"><span class="icon">程</span>行程安排</a>
         <a href="#reply-drafts"><span class="icon">回</span>AI 回覆</a>
         <a href="#mobile-gpt"><span class="icon">手</span>手機連線</a>
         <a href="#mobile-sync"><span class="icon">同</span>手機同步</a>
@@ -1530,6 +1531,24 @@
         </div>
       </section>
 
+      <section class="section" id="schedules">
+        <header>
+          <h3>行程與現場安排</h3>
+          <span class="pill blue">可人工確認</span>
+        </header>
+        <div class="section-body board">
+          <form class="inline-form" id="schedule-form">
+            <div class="field"><label for="scheduleDate">日期</label><input id="scheduleDate" type="date" required></div>
+            <div class="field"><label for="scheduleTime">時間</label><input id="scheduleTime" type="time"></div>
+            <div class="field"><label for="scheduleTitle">行程</label><input id="scheduleTitle" placeholder="例如：現場丈量" required></div>
+            <div class="field"><label for="scheduleCategory">類型</label><select id="scheduleCategory"><option value="site_visit">現場</option><option value="proposal">提案</option><option value="meeting">會議</option><option value="deadline">截止</option><option value="other">其他</option></select></div>
+            <div class="field"><label for="scheduleLocation">地點</label><input id="scheduleLocation" placeholder="地址或會議連結"></div>
+            <button class="btn primary" type="submit"><span class="icon">加</span>新增行程</button>
+          </form>
+          <div class="data-list" id="schedule-records" aria-live="polite"></div>
+        </div>
+      </section>
+
       <section class="grid">
         <div class="section" id="portfolio">
           <header>
@@ -1895,6 +1914,7 @@
     let crmRecords = museStore.read("crm");
     let caseRecords = museStore.read("cases");
     let taskRecords = museStore.read("tasks");
+    let scheduleRecords = museStore.read("schedules");
     let portfolioRecords = museStore.read("portfolio");
     let activePortfolioDraftId = null;
     let activeReplyDraftId = null;
@@ -1938,6 +1958,18 @@
         () => {
           deleteRecord("tasks", record, taskRecords, "tasks", renderTaskRecords, "待辦");
         }
+      )));
+    };
+
+    const renderScheduleRecords = () => {
+      const container = document.getElementById("schedule-records");
+      if (!container) return;
+      container.replaceChildren(...scheduleRecords.map((record) => makeRecordCard(
+        `${record.event_date || record.date || "待確認日期"} ${record.event_time || record.time || ""}`,
+        `${record.title}｜${record.location || "地點待補"}`,
+        `類型：${record.category || "其他"}｜狀態：${record.confirmation_status || "待確認"}`,
+        record.confirmation_status || "待確認",
+        () => deleteRecord("schedules", record, scheduleRecords, "schedules", renderScheduleRecords, "行程")
       )));
     };
 
@@ -2016,21 +2048,23 @@
       if (!apiEnabled()) return;
       try {
         const loadResource = (path) => apiRequest(path).catch(() => ({ items: [] }));
-        const [customers, cases, tasks, portfolios, summary] = await Promise.all([
+        const [customers, cases, tasks, schedules, portfolios, summary] = await Promise.all([
           loadResource("/api/customers"), loadResource("/api/cases"), loadResource("/api/tasks"),
-          loadResource("/api/portfolios"), apiRequest("/api/assistant/today").catch(() => null)
+          loadResource("/api/schedules"), loadResource("/api/portfolios"), apiRequest("/api/assistant/today").catch(() => null)
         ]);
         crmRecords = customers.items.map((item) => ({
           ...item, size: item.size_range, budget: item.budget_range, summary: item.needs_summary, nextFollow: item.next_follow_up_at, status: item.status || "API"
         }));
         caseRecords = cases.items.map((item) => ({ ...item, next: item.next_action }));
         taskRecords = tasks.items.map((item) => ({ ...item, name: item.title, owner: "API", due: item.due_at }));
+        scheduleRecords = schedules.items;
         portfolioRecords = portfolios.items.map((item) => ({
           ...item, type: item.category, idea: item.design_idea, publicStatus: item.public_status
         }));
         renderCrmRecords();
         renderCaseRecords();
         renderTaskRecords();
+        renderScheduleRecords();
         renderPortfolioRecords();
         if (summary) {
           document.getElementById("metric-today-work").textContent = summary.counts.open_tasks;
@@ -2142,6 +2176,38 @@
       renderTaskRecords();
       event.target.reset();
       showToast("已建立待辦（目前儲存在本機預覽）");
+    });
+
+    document.getElementById("schedule-form")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const record = {
+        event_date: document.getElementById("scheduleDate").value,
+        event_time: document.getElementById("scheduleTime").value,
+        title: document.getElementById("scheduleTitle").value.trim(),
+        category: document.getElementById("scheduleCategory").value,
+        location: document.getElementById("scheduleLocation").value.trim(),
+        confirmation_status: "pending"
+      };
+      if (!record.event_date || !record.title) {
+        showToast("請先填寫行程日期與名稱");
+        return;
+      }
+      if (apiEnabled()) {
+        try {
+          await apiRequest("/api/schedules", { method: "POST", body: JSON.stringify(record) });
+          event.target.reset();
+          await loadApiData(false);
+          showToast("已寫入 API 行程資料");
+        } catch (error) {
+          showToast(`行程寫入失敗：${error.message}`);
+        }
+        return;
+      }
+      scheduleRecords.unshift(record);
+      museStore.write("schedules", scheduleRecords);
+      renderScheduleRecords();
+      event.target.reset();
+      showToast("已建立行程（目前儲存在本機預覽）");
     });
 
     document.getElementById("portfolio-form")?.addEventListener("submit", async (event) => {

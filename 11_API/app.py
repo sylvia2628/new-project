@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS tasks (
   due_at TEXT DEFAULT '', next_action TEXT DEFAULT '', created_by INTEGER,
   created_at TEXT NOT NULL, completed_at TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS schedules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT DEFAULT 'manual', event_date TEXT NOT NULL, event_time TEXT DEFAULT '',
+  title TEXT NOT NULL, category TEXT DEFAULT '', case_id INTEGER, location TEXT DEFAULT '',
+  owner_id INTEGER, confirmation_status TEXT NOT NULL DEFAULT 'pending',
+  notes TEXT DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS portfolios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL, case_id INTEGER, category TEXT DEFAULT '', style TEXT DEFAULT '',
@@ -84,11 +91,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ROLE_PERMISSIONS = {
     "manager": {"*"},
-    "designer": {"assistant.read", "customers.read", "cases.read", "cases.write", "tasks.read", "tasks.write", "portfolios.read", "portfolios.write", "drafts.read", "drafts.write"},
-    "assistant": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
-    "site_manager": {"assistant.read", "cases.read", "cases.write", "tasks.read", "tasks.write"},
+    "designer": {"assistant.read", "customers.read", "cases.read", "cases.write", "tasks.read", "tasks.write", "schedules.read", "schedules.write", "portfolios.read", "portfolios.write", "drafts.read", "drafts.write"},
+    "assistant": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "schedules.read", "schedules.write", "portfolios.read", "drafts.read", "drafts.write"},
+    "site_manager": {"assistant.read", "cases.read", "cases.write", "tasks.read", "tasks.write", "schedules.read", "schedules.write"},
     "finance": {"assistant.read", "customers.read", "cases.read"},
-    "admin": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
+    "admin": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "schedules.read", "schedules.write", "portfolios.read", "drafts.read", "drafts.write"},
     "worker": {"tasks.read", "tasks.write"},
 }
 
@@ -96,6 +103,7 @@ RESOURCE_FIELDS = {
     "customers": {"name", "phone", "email", "area", "source", "type", "size_range", "budget_range", "style", "needs_summary", "owner_id", "status", "last_contact_at", "next_follow_up_at"},
     "cases": {"name", "customer_id", "designer_id", "site_manager_id", "address", "stage", "progress", "budget_range", "next_action", "due_at", "risk_status", "notes"},
     "tasks": {"title", "case_id", "assignee_id", "priority", "status", "due_at", "next_action", "completed_at"},
+    "schedules": {"source", "event_date", "event_time", "title", "category", "case_id", "location", "owner_id", "confirmation_status", "notes"},
     "portfolios": {"name", "case_id", "category", "style", "size", "area", "year", "design_idea", "public_status", "publish_status"},
     "drafts": {"kind", "channel", "source_type", "source_id", "content", "status", "created_by_ai", "published_at"},
 }
@@ -191,7 +199,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", DEFAULT_CORS_ORIGIN)
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
         self.end_headers()
         self.wfile.write(body)
 
@@ -285,6 +293,16 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not user:
             return
         resource = urlparse(self.path).path[5:].strip("/")
+        if resource.startswith("drafts/") and resource.endswith("/publish"):
+            pieces = resource.split("/")
+            if len(pieces) == 3 and pieces[1].isdigit():
+                if not has_permission(user, "drafts.publish"):
+                    self.send_json(403, {"error": "forbidden", "required": "drafts.publish"})
+                    return
+                self.publish_draft(user, int(pieces[1]))
+                return
+            self.send_json(404, {"error": "resource_id_required"})
+            return
         if resource == "drafts/generate":
             if not has_permission(user, "drafts.write"):
                 self.send_json(403, {"error": "forbidden", "required": "drafts.write"})
@@ -353,6 +371,15 @@ class ApiHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "resource_id_required"})
             return
         resource, resource_id = path[0], int(path[1])
+        if resource == "users":
+            if not has_permission(user, "users.write"):
+                self.send_json(403, {"error": "forbidden", "required": "users.write"})
+                return
+            payload = self.body_json()
+            if payload is None:
+                return
+            self.update_user_role(user, resource_id, payload)
+            return
         permission = resource + ".write"
         if not has_permission(user, permission):
             self.send_json(403, {"error": "forbidden", "required": permission})
@@ -382,7 +409,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not has_permission(user, permission):
             self.send_json(403, {"error": "forbidden", "required": permission})
             return
-        allowed = {"customers", "cases", "tasks", "portfolios", "drafts", "audit_logs"}
+        allowed = {"users", "customers", "cases", "tasks", "schedules", "portfolios", "drafts", "audit_logs"}
         if resource not in allowed:
             self.send_json(404, {"error": "unknown_resource"})
             return
@@ -391,11 +418,11 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.send_json(200, {"items": [row_json(row) for row in rows]})
 
     def create_resource(self, user, table, payload):
-        allowed = {"customers", "cases", "tasks", "portfolios", "drafts"}
+        allowed = {"customers", "cases", "tasks", "schedules", "portfolios", "drafts"}
         if table not in allowed:
             self.send_json(404, {"error": "unknown_resource"})
             return
-        required = {"customers": ["name"], "cases": ["name", "stage"], "tasks": ["title"], "portfolios": ["name"], "drafts": ["kind", "channel", "content"]}[table]
+        required = {"customers": ["name"], "cases": ["name", "stage"], "tasks": ["title"], "schedules": ["event_date", "title"], "portfolios": ["name"], "drafts": ["kind", "channel", "content"]}[table]
         missing = [key for key in required if not payload.get(key)]
         if missing:
             self.send_json(400, {"error": "missing_fields", "fields": missing})
@@ -408,6 +435,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             fields.update({"created_at": timestamp, "updated_at": timestamp, "progress": max(0, min(100, int(fields.get("progress", 0)))), "risk_status": fields.get("risk_status", "normal")})
         elif table == "tasks":
             fields.update({"created_at": timestamp, "status": fields.get("status", "todo"), "priority": fields.get("priority", "medium"), "created_by": user["id"]})
+        elif table == "schedules":
+            fields.update({"created_at": timestamp, "updated_at": timestamp, "source": fields.get("source", "manual"), "confirmation_status": fields.get("confirmation_status", "pending")})
         elif table == "portfolios":
             fields.update({"created_at": timestamp, "updated_at": timestamp, "created_by": user["id"], "publish_status": fields.get("publish_status", "draft")})
         elif table == "drafts":
@@ -424,7 +453,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.send_json(201, result)
 
     def update_resource(self, user, table, resource_id, payload):
-        allowed = {"customers", "cases", "tasks", "portfolios", "drafts"}
+        allowed = {"customers", "cases", "tasks", "schedules", "portfolios", "drafts"}
         if table not in allowed:
             self.send_json(404, {"error": "unknown_resource"})
             return
@@ -467,6 +496,39 @@ class ApiHandler(BaseHTTPRequestHandler):
             connection.commit()
         audit(user, "delete", table, resource_id, before=row_json(before_row))
         self.send_json(200, {"deleted": True, "resource": table, "id": resource_id})
+
+    def publish_draft(self, user, resource_id):
+        with DB_LOCK, db_connection() as connection:
+            before_row = connection.execute("SELECT * FROM drafts WHERE id = ?", (resource_id,)).fetchone()
+            if not before_row:
+                self.send_json(404, {"error": "not_found"})
+                return
+            if before_row["status"] != "approved":
+                self.send_json(409, {"error": "draft_must_be_approved_before_publish"})
+                return
+            timestamp = now_iso()
+            connection.execute("UPDATE drafts SET status = 'published', published_at = ?, updated_at = ? WHERE id = ?", (timestamp, timestamp, resource_id))
+            after_row = connection.execute("SELECT * FROM drafts WHERE id = ?", (resource_id,)).fetchone()
+            connection.commit()
+        after = row_json(after_row)
+        audit(user, "publish", "drafts", resource_id, before=row_json(before_row), after=after)
+        self.send_json(200, after)
+
+    def update_user_role(self, user, resource_id, payload):
+        role = str(payload.get("role", "")).strip()
+        if role not in ROLE_PERMISSIONS:
+            self.send_json(400, {"error": "invalid_role", "roles": sorted(ROLE_PERMISSIONS)})
+            return
+        with DB_LOCK, db_connection() as connection:
+            before_row = connection.execute("SELECT * FROM users WHERE id = ?", (resource_id,)).fetchone()
+            if not before_row:
+                self.send_json(404, {"error": "not_found"})
+                return
+            connection.execute("UPDATE users SET role = ? WHERE id = ?", (role, resource_id))
+            after_row = connection.execute("SELECT * FROM users WHERE id = ?", (resource_id,)).fetchone()
+            connection.commit()
+        audit(user, "role_update", "users", resource_id, before=row_json(before_row), after=row_json(after_row))
+        self.send_json(200, row_json(after_row))
 
 
 def run_server(host="127.0.0.1", port=8787):

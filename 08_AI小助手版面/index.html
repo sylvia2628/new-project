@@ -380,6 +380,85 @@
       gap: 10px;
     }
 
+    .data-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .data-list:empty {
+      display: none;
+    }
+
+    .record {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfb;
+      display: grid;
+      gap: 7px;
+    }
+
+    .record-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .record strong {
+      font-size: 14px;
+    }
+
+    .record small,
+    .record p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .inline-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(120px, 0.8fr)) auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .inline-form .field {
+      min-width: 0;
+    }
+
+    .inline-form .btn {
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 50;
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 12px 14px;
+      border: 1px solid #c9dccf;
+      border-radius: 8px;
+      background: var(--soft-green);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .lead {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -867,6 +946,7 @@
 
       .metrics,
       .form-grid,
+      .inline-form,
       .links {
         grid-template-columns: 1fr;
       }
@@ -1250,7 +1330,7 @@
             <span class="pill blue">新詢問</span>
           </header>
           <div class="section-body">
-            <form class="form-grid">
+            <form class="form-grid" id="crm-form">
               <div class="field">
                 <label for="name">客戶姓名</label>
                 <input id="name" value="王小姐">
@@ -1303,9 +1383,10 @@
                 <input id="nextFollow" value="2026-07-13">
               </div>
               <div class="field full">
-                <button class="btn primary" type="button"><span class="icon">建</span>建立案件</button>
+                <button class="btn primary" type="submit"><span class="icon">建</span>建立客戶</button>
               </div>
             </form>
+            <div class="data-list" id="crm-records" aria-live="polite"></div>
           </div>
         </div>
       </section>
@@ -1316,7 +1397,28 @@
             <h3>案場進度管理</h3>
             <span class="pill rust">需追蹤</span>
           </header>
-          <div class="section-body board">
+          <div class="section-body board" id="case-board">
+            <form class="inline-form" id="case-form">
+              <div class="field">
+                <label for="caseName">案件名稱</label>
+                <input id="caseName" placeholder="例如：林先生鼓山新成屋">
+              </div>
+              <div class="field">
+                <label for="caseStage">目前階段</label>
+                <select id="caseStage">
+                  <option>初步諮詢</option><option>丈量</option><option>平面配置</option><option>3D</option><option>施工圖</option><option>估價</option><option>合約</option><option>工程</option><option>驗收</option><option>完工</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="caseProgress">完成百分比</label>
+                <input id="caseProgress" type="number" min="0" max="100" value="0">
+              </div>
+              <div class="field">
+                <label for="caseNext">下一步</label>
+                <input id="caseNext" placeholder="下一步工作">
+              </div>
+              <button class="btn primary" type="submit"><span class="icon">建</span>新增案件</button>
+            </form>
             <article class="lead">
               <div class="lead-top">
                 <h4>林先生 / 新成屋裝修</h4>
@@ -1338,6 +1440,7 @@
               </div>
               <p>商業空間，現場施工中。下一步：安排驗收前缺失整理。</p>
             </article>
+            <div class="data-list" id="case-records" aria-live="polite"></div>
           </div>
         </div>
 
@@ -1365,6 +1468,25 @@
             <span class="pill rust">AI 提醒</span>
           </header>
           <div class="section-body board">
+            <form class="inline-form" id="task-form">
+              <div class="field">
+                <label for="taskName">工作名稱</label>
+                <input id="taskName" placeholder="例如：整理提案簡報">
+              </div>
+              <div class="field">
+                <label for="taskOwner">指派對象</label>
+                <input id="taskOwner" placeholder="設計師／助理／行政">
+              </div>
+              <div class="field">
+                <label for="taskDue">截止日期</label>
+                <input id="taskDue" type="date">
+              </div>
+              <div class="field">
+                <label for="taskPriority">優先程度</label>
+                <select id="taskPriority"><option>高</option><option selected>中</option><option>低</option></select>
+              </div>
+              <button class="btn primary" type="submit"><span class="icon">加</span>新增待辦</button>
+            </form>
             <article class="lead">
               <div class="lead-top">
                 <h4>聯上康橋施工圖</h4>
@@ -1386,6 +1508,7 @@
               </div>
               <p>狀態：待約攝影時間。AI 建議：同步確認可公開照片範圍。</p>
             </article>
+            <div class="data-list" id="task-records" aria-live="polite"></div>
           </div>
         </div>
 
@@ -1477,6 +1600,7 @@
     <a href="#mobile-gpt"><span class="icon">手</span><span>手機</span></a>
     <a href="#portfolio"><span class="icon">作</span><span>作品</span></a>
   </nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="data/mobile-sync-data.js"></script>
   <script>
     const allInternalLinks = document.querySelectorAll('a[href^="#"]');
@@ -1506,6 +1630,185 @@
     });
 
     activateNavigation(window.location.hash);
+
+    const museStore = {
+      read(key) {
+        try {
+          return JSON.parse(localStorage.getItem(`muse:${key}`) || "[]");
+        } catch (error) {
+          return [];
+        }
+      },
+      write(key, value) {
+        try {
+          localStorage.setItem(`muse:${key}`, JSON.stringify(value));
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+    };
+
+    const showToast = (message) => {
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+    };
+
+    const makeRecordCard = (title, meta, detail, badge, onRemove) => {
+      const card = document.createElement("article");
+      card.className = "record";
+
+      const head = document.createElement("div");
+      head.className = "record-head";
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      head.append(strong);
+
+      if (badge) {
+        const pill = document.createElement("span");
+        pill.className = "pill blue";
+        pill.textContent = badge;
+        head.append(pill);
+      }
+
+      const metaNode = document.createElement("small");
+      metaNode.textContent = meta;
+      const detailNode = document.createElement("p");
+      detailNode.textContent = detail;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn";
+      remove.textContent = "刪除這筆";
+      remove.addEventListener("click", onRemove);
+
+      card.append(head, metaNode, detailNode, remove);
+      return card;
+    };
+
+    let crmRecords = museStore.read("crm");
+    let caseRecords = museStore.read("cases");
+    let taskRecords = museStore.read("tasks");
+
+    const renderCrmRecords = () => {
+      const container = document.getElementById("crm-records");
+      if (!container) return;
+      container.replaceChildren(...crmRecords.map((record, index) => makeRecordCard(
+        record.name,
+        `${record.area}｜${record.type}｜預算 ${record.budget}`,
+        `${record.summary} 下次追蹤：${record.nextFollow || "待安排"}`,
+        record.status,
+        () => {
+          crmRecords.splice(index, 1);
+          museStore.write("crm", crmRecords);
+          renderCrmRecords();
+          showToast("已刪除 CRM 暫存資料");
+        }
+      )));
+    };
+
+    const renderCaseRecords = () => {
+      const container = document.getElementById("case-records");
+      if (!container) return;
+      container.replaceChildren(...caseRecords.map((record, index) => makeRecordCard(
+        record.name,
+        `${record.stage}｜完成 ${record.progress}%`,
+        `下一步：${record.next || "待補充"}`,
+        record.progress >= 80 ? "接近完成" : "進行中",
+        () => {
+          caseRecords.splice(index, 1);
+          museStore.write("cases", caseRecords);
+          renderCaseRecords();
+          showToast("已刪除案件暫存資料");
+        }
+      )));
+    };
+
+    const renderTaskRecords = () => {
+      const container = document.getElementById("task-records");
+      if (!container) return;
+      container.replaceChildren(...taskRecords.map((record, index) => makeRecordCard(
+        record.name,
+        `${record.owner || "未指派"}｜截止 ${record.due || "待安排"}`,
+        "狀態：待處理。這筆資料目前只儲存在本機瀏覽器。",
+        record.priority,
+        () => {
+          taskRecords.splice(index, 1);
+          museStore.write("tasks", taskRecords);
+          renderTaskRecords();
+          showToast("已刪除待辦暫存資料");
+        }
+      )));
+    };
+
+    document.getElementById("crm-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = {
+        name: document.getElementById("name").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        area: document.getElementById("area").value.trim(),
+        type: document.getElementById("type").value,
+        size: document.getElementById("size").value,
+        budget: document.getElementById("budget").value,
+        summary: document.getElementById("summary").value.trim(),
+        family: document.getElementById("family").value.trim(),
+        nextFollow: document.getElementById("nextFollow").value.trim(),
+        status: "新詢問"
+      };
+      if (!record.name) {
+        showToast("請先填寫客戶姓名");
+        return;
+      }
+      crmRecords.unshift(record);
+      museStore.write("crm", crmRecords);
+      renderCrmRecords();
+      showToast("已建立 CRM 客戶（目前儲存在本機預覽）");
+    });
+
+    document.getElementById("case-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = {
+        name: document.getElementById("caseName").value.trim(),
+        stage: document.getElementById("caseStage").value,
+        progress: Math.max(0, Math.min(100, Number(document.getElementById("caseProgress").value) || 0)),
+        next: document.getElementById("caseNext").value.trim()
+      };
+      if (!record.name) {
+        showToast("請先填寫案件名稱");
+        return;
+      }
+      caseRecords.unshift(record);
+      museStore.write("cases", caseRecords);
+      renderCaseRecords();
+      event.target.reset();
+      showToast("已建立案件（目前儲存在本機預覽）");
+    });
+
+    document.getElementById("task-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = {
+        name: document.getElementById("taskName").value.trim(),
+        owner: document.getElementById("taskOwner").value.trim(),
+        due: document.getElementById("taskDue").value,
+        priority: document.getElementById("taskPriority").value
+      };
+      if (!record.name) {
+        showToast("請先填寫工作名稱");
+        return;
+      }
+      taskRecords.unshift(record);
+      museStore.write("tasks", taskRecords);
+      renderTaskRecords();
+      event.target.reset();
+      showToast("已建立待辦（目前儲存在本機預覽）");
+    });
+
+    renderCrmRecords();
+    renderCaseRecords();
+    renderTaskRecords();
 
     const copyButtons = document.querySelectorAll("[data-copy]");
 

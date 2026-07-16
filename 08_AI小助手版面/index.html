@@ -1079,22 +1079,22 @@
       <section class="metrics" aria-label="今日指標">
         <div class="metric">
           <span>今日工作</span>
-          <strong>18</strong>
+          <strong id="metric-today-work">18</strong>
           <small>含設計、工務、行政與追蹤事項</small>
         </div>
         <div class="metric">
           <span>待回覆客戶</span>
-          <strong>5</strong>
+          <strong id="metric-followups">5</strong>
           <small>AI 已產生追蹤訊息草稿</small>
         </div>
         <div class="metric">
           <span>即將丈量 / 提案</span>
-          <strong>7</strong>
+          <strong id="metric-upcoming">7</strong>
           <small>本週需確認時程與資料</small>
         </div>
         <div class="metric">
           <span>待上架作品</span>
-          <strong>3</strong>
+          <strong id="metric-pending-portfolio">3</strong>
           <small>可產生官網與社群文案</small>
         </div>
       </section>
@@ -1999,8 +1999,10 @@
     const loadApiData = async (announce = true) => {
       if (!apiEnabled()) return;
       try {
-        const [customers, cases, tasks, portfolios] = await Promise.all([
-          apiRequest("/api/customers"), apiRequest("/api/cases"), apiRequest("/api/tasks"), apiRequest("/api/portfolios")
+        const loadResource = (path) => apiRequest(path).catch(() => ({ items: [] }));
+        const [customers, cases, tasks, portfolios, summary] = await Promise.all([
+          loadResource("/api/customers"), loadResource("/api/cases"), loadResource("/api/tasks"),
+          loadResource("/api/portfolios"), apiRequest("/api/assistant/today").catch(() => null)
         ]);
         crmRecords = customers.items.map((item) => ({
           ...item, size: item.size_range, budget: item.budget_range, summary: item.needs_summary, nextFollow: item.next_follow_up_at, status: item.status || "API"
@@ -2014,6 +2016,12 @@
         renderCaseRecords();
         renderTaskRecords();
         renderPortfolioRecords();
+        if (summary) {
+          document.getElementById("metric-today-work").textContent = summary.counts.open_tasks;
+          document.getElementById("metric-followups").textContent = summary.counts.followups_due;
+          document.getElementById("metric-upcoming").textContent = summary.counts.due_soon_tasks + summary.counts.risky_cases;
+          document.getElementById("metric-pending-portfolio").textContent = summary.counts.pending_portfolios;
+        }
         if (announce) showToast("已從 API 載入資料");
       } catch (error) {
         if (announce) showToast(`API 資料載入失敗：${error.message}`);

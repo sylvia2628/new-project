@@ -84,11 +84,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ROLE_PERMISSIONS = {
     "manager": {"*"},
-    "designer": {"customers.read", "cases.read", "cases.write", "tasks.read", "tasks.write", "portfolios.read", "portfolios.write", "drafts.read", "drafts.write"},
-    "assistant": {"customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
-    "site_manager": {"cases.read", "cases.write", "tasks.read", "tasks.write"},
-    "finance": {"customers.read", "cases.read"},
-    "admin": {"customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
+    "designer": {"assistant.read", "customers.read", "cases.read", "cases.write", "tasks.read", "tasks.write", "portfolios.read", "portfolios.write", "drafts.read", "drafts.write"},
+    "assistant": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
+    "site_manager": {"assistant.read", "cases.read", "cases.write", "tasks.read", "tasks.write"},
+    "finance": {"assistant.read", "customers.read", "cases.read"},
+    "admin": {"assistant.read", "customers.read", "customers.write", "cases.read", "tasks.read", "tasks.write", "portfolios.read", "drafts.read", "drafts.write"},
     "worker": {"tasks.read", "tasks.write"},
 }
 
@@ -232,11 +232,53 @@ class ApiHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/me":
             self.send_json(200, {"user": user, "permissions": sorted(ROLE_PERMISSIONS.get(user["role"], set()))})
             return
+        if parsed.path == "/api/assistant/today":
+            if not has_permission(user, "assistant.read"):
+                self.send_json(403, {"error": "forbidden", "required": "assistant.read"})
+                return
+            self.send_json(200, self.assistant_summary(7))
+            return
+        if parsed.path == "/api/assistant/weekly":
+            if not has_permission(user, "assistant.read"):
+                self.send_json(403, {"error": "forbidden", "required": "assistant.read"})
+                return
+            self.send_json(200, self.assistant_summary(7))
+            return
         if parsed.path.startswith("/api/"):
             resource = parsed.path[5:].strip("/")
             self.list_resource(user, resource)
             return
         self.send_json(404, {"error": "not_found"})
+
+    def assistant_summary(self, horizon_days):
+        today = datetime.now(timezone.utc).date()
+        horizon = today.fromordinal(today.toordinal() + horizon_days)
+        today_text = today.isoformat()
+        horizon_text = horizon.isoformat()
+        with DB_LOCK, db_connection() as connection:
+            open_tasks = connection.execute("SELECT * FROM tasks WHERE status NOT IN ('done', 'completed') ORDER BY due_at ASC, id DESC").fetchall()
+            overdue = [row_json(row) for row in open_tasks if row["due_at"] and row["due_at"] < today_text]
+            due_soon = [row_json(row) for row in open_tasks if row["due_at"] and today_text <= row["due_at"] <= horizon_text]
+            followups = connection.execute("SELECT * FROM customers WHERE next_follow_up_at != '' AND next_follow_up_at <= ? ORDER BY next_follow_up_at ASC", (today_text,)).fetchall()
+            risky_cases = connection.execute("SELECT * FROM cases WHERE risk_status != 'normal' OR (due_at != '' AND due_at <= ?) ORDER BY due_at ASC", (horizon_text,)).fetchall()
+            pending_portfolios = connection.execute("SELECT * FROM portfolios WHERE public_status IN ('pending', '可公開') AND publish_status != 'published' ORDER BY id DESC").fetchall()
+        return {
+            "generated_at": now_iso(),
+            "horizon_days": horizon_days,
+            "counts": {
+                "open_tasks": len(open_tasks),
+                "overdue_tasks": len(overdue),
+                "due_soon_tasks": len(due_soon),
+                "followups_due": len(followups),
+                "risky_cases": len(risky_cases),
+                "pending_portfolios": len(pending_portfolios)
+            },
+            "overdue_tasks": overdue[:20],
+            "due_soon_tasks": due_soon[:20],
+            "followups_due": [row_json(row) for row in followups[:20]],
+            "risky_cases": [row_json(row) for row in risky_cases[:20]],
+            "pending_portfolios": [row_json(row) for row in pending_portfolios[:20]]
+        }
 
     def do_POST(self):
         user = self.authenticate()

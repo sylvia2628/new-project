@@ -20,6 +20,7 @@ curl http://127.0.0.1:8787/health
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/me
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/customers
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/audit_logs
+curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/assistant/today
 curl -X POST http://127.0.0.1:8787/api/customers \
   -H 'Authorization: Bearer local-manager' \
   -H 'Content-Type: application/json' \

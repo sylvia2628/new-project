@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "roles": {
+    "manager": {
+      "label": "管理者",
+      "permissions": ["*"],
+      "sensitive": true
+    },
+    "designer": {
+      "label": "設計師",
+      "permissions": ["customers.read_assigned", "cases.read_assigned", "cases.update_assigned", "tasks.*", "portfolios.*", "drafts.create", "drafts.read"],
+      "denied": ["finance.read", "contracts.amount.read", "users.manage"]
+    },
+    "assistant": {
+      "label": "設計助理",
+      "permissions": ["customers.create", "customers.read_basic", "customers.update_notes", "cases.read_basic", "tasks.*", "schedules.*", "portfolios.assets.write", "drafts.create"],
+      "denied": ["finance.*", "contracts.amount.*", "users.manage"]
+    },
+    "site_manager": {
+      "label": "工務",
+      "permissions": ["cases.read_construction", "cases.update_progress", "tasks.engineering.*", "assets.site_photos.write"],
+      "denied": ["customers.personal.read", "finance.*", "contracts.amount.*"]
+    },
+    "finance": {
+      "label": "財務",
+      "permissions": ["finance.*", "contracts.amount.read", "customers.read_billing"],
+      "denied": ["design_content.write", "portfolios.publish"]
+    },
+    "admin": {
+      "label": "行政",
+      "permissions": ["customers.read_basic", "customers.update_notes", "schedules.*", "tasks.*", "portfolios.assets.write"],
+      "denied": ["finance.margin.read", "contracts.amount.write", "users.manage"]
+    },
+    "worker": {
+      "label": "工班",
+      "permissions": ["tasks.assigned.read", "tasks.assigned.update", "assets.site_photos.write"],
+      "denied": ["customers.*", "finance.*", "cases.other.read"]
+    }
+  },
+  "ai_rules": {
+    "allow": ["summarize", "draft", "remind", "suggest_next_step"],
+    "require_manager_review": ["customer_message.send", "social.publish", "website.publish", "contract.amount.change"],
+    "never_allow": ["delete_customer", "delete_case", "provide_final_quote", "change_contract_amount"]
+  }
+}

@@ -1594,9 +1594,22 @@
         <div class="section" id="roles">
           <header>
             <h3>角色權限</h3>
-            <span class="pill gold">多人共用</span>
+            <span class="pill gold">開發預覽</span>
           </header>
           <div class="section-body knowledge">
+            <div class="field">
+              <label for="role-preview">權限預覽角色（目前只影響畫面展示）</label>
+              <select id="role-preview">
+                <option value="manager">管理者</option>
+                <option value="designer">設計師</option>
+                <option value="assistant">設計助理</option>
+                <option value="site_manager">工務</option>
+                <option value="finance">財務</option>
+                <option value="admin">行政</option>
+                <option value="worker">工班</option>
+              </select>
+            </div>
+            <div class="knowledge" id="role-preview-list" aria-live="polite"></div>
             <div class="fact"><b>管理者</b><span>所有資料、AI 草稿審核、使用者管理。</span></div>
             <div class="fact"><b>設計師</b><span>自己案件、客戶、作品、待辦。</span></div>
             <div class="fact"><b>助理</b><span>工作、行程、客戶基本資料、作品素材。</span></div>
@@ -1697,6 +1710,29 @@
       showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
     };
 
+    const rolePreviewData = {
+      manager: { label: "管理者", allow: "全部資料、使用者管理、AI 草稿審核", deny: "無" },
+      designer: { label: "設計師", allow: "自己案件、客戶、作品、待辦、AI 文案草稿", deny: "財務總表、其他設計師敏感資料" },
+      assistant: { label: "設計助理", allow: "工作、行程、客戶基本資料、作品素材", deny: "財務、合約金額" },
+      site_manager: { label: "工務", allow: "工程案件、進度、施工圖、現場照片", deny: "完整客戶個資、財務毛利" },
+      finance: { label: "財務", allow: "收付款、合約金額、工程支出", deny: "設計內容、作品發布" },
+      admin: { label: "行政", allow: "客戶基本資料、行程、追蹤、待辦", deny: "財務毛利、敏感合約" },
+      worker: { label: "工班", allow: "指派給自己的工程任務與回報", deny: "客戶資料、財務、其他案件" }
+    };
+
+    const renderRolePreview = () => {
+      const select = document.getElementById("role-preview");
+      const container = document.getElementById("role-preview-list");
+      const role = rolePreviewData[select?.value || "manager"];
+      if (!container || !role) return;
+      container.replaceChildren(
+        makeRecordCard(role.label, `可查看／編輯`, role.allow, "可操作", () => {}),
+        makeRecordCard(role.label, `限制`, role.deny, "不可操作", () => {})
+      );
+    };
+
+    document.getElementById("role-preview")?.addEventListener("change", renderRolePreview);
+
     const makeRecordCard = (title, meta, detail, badge, onRemove) => {
       const card = document.createElement("article");
       card.className = "record";
@@ -1727,6 +1763,8 @@
       card.append(head, metaNode, detailNode, remove);
       return card;
     };
+
+    renderRolePreview();
 
     let crmRecords = museStore.read("crm");
     let caseRecords = museStore.read("cases");

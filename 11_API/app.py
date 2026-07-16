@@ -275,6 +275,21 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         self.update_resource(user, resource, resource_id, payload)
 
+    def do_DELETE(self):
+        user = self.authenticate()
+        if not user:
+            return
+        path = urlparse(self.path).path[5:].strip("/").split("/")
+        if len(path) != 2 or not path[1].isdigit():
+            self.send_json(404, {"error": "resource_id_required"})
+            return
+        resource, resource_id = path[0], int(path[1])
+        permission = resource + ".delete"
+        if not has_permission(user, permission):
+            self.send_json(403, {"error": "forbidden", "required": permission})
+            return
+        self.delete_resource(user, resource, resource_id)
+
     def list_resource(self, user, resource):
         permission = resource + ".read"
         if not has_permission(user, permission):
@@ -350,6 +365,21 @@ class ApiHandler(BaseHTTPRequestHandler):
         after = row_json(after_row)
         audit(user, "update", table, resource_id, before=before, after=after)
         self.send_json(200, after)
+
+    def delete_resource(self, user, table, resource_id):
+        allowed = {"customers", "cases", "tasks", "portfolios", "drafts"}
+        if table not in allowed:
+            self.send_json(404, {"error": "unknown_resource"})
+            return
+        with DB_LOCK, db_connection() as connection:
+            before_row = connection.execute("SELECT * FROM " + table + " WHERE id = ?", (resource_id,)).fetchone()
+            if not before_row:
+                self.send_json(404, {"error": "not_found"})
+                return
+            connection.execute("DELETE FROM " + table + " WHERE id = ?", (resource_id,))
+            connection.commit()
+        audit(user, "delete", table, resource_id, before=row_json(before_row))
+        self.send_json(200, {"deleted": True, "resource": table, "id": resource_id})
 
 
 def run_server(host="127.0.0.1", port=8787):

@@ -24,6 +24,7 @@ curl -X POST http://127.0.0.1:8787/api/customers \
   -H 'Authorization: Bearer local-manager' \
   -H 'Content-Type: application/json' \
   -d '{"name":"測試客戶","area":"高雄","status":"new"}'
+# DELETE /api/:resource/:id 僅管理者可用，避免一般角色誤刪資料。
 ```
 
 ## 安全限制

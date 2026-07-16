@@ -1801,6 +1801,7 @@
       try {
         const result = await apiRequest("/api/me");
         setApiStatus("連線成功", `${result.user.display_name}｜${result.user.role}`);
+        await loadApiData(false);
         showToast("API 連線成功");
       } catch (error) {
         setApiStatus("連線失敗", error.message);
@@ -1873,6 +1874,24 @@
 
     renderRolePreview();
 
+    const deleteRecord = async (resource, record, collection, storageKey, render, message) => {
+      if (apiEnabled() && record.id) {
+        try {
+          await apiRequest(`/api/${resource}/${record.id}`, { method: "DELETE" });
+          collection.splice(collection.indexOf(record), 1);
+          render();
+          showToast(`已從 API 刪除${message}`);
+        } catch (error) {
+          showToast(`刪除失敗：${error.message}`);
+        }
+        return;
+      }
+      collection.splice(collection.indexOf(record), 1);
+      museStore.write(storageKey, collection);
+      render();
+      showToast(`已刪除${message}暫存資料`);
+    };
+
     let crmRecords = museStore.read("crm");
     let caseRecords = museStore.read("cases");
     let taskRecords = museStore.read("tasks");
@@ -1887,10 +1906,7 @@
         `${record.summary} 下次追蹤：${record.nextFollow || "待安排"}`,
         record.status,
         () => {
-          crmRecords.splice(index, 1);
-          museStore.write("crm", crmRecords);
-          renderCrmRecords();
-          showToast("已刪除 CRM 暫存資料");
+          deleteRecord("customers", record, crmRecords, "crm", renderCrmRecords, " CRM 客戶");
         }
       )));
     };
@@ -1904,10 +1920,7 @@
         `下一步：${record.next || "待補充"}`,
         record.progress >= 80 ? "接近完成" : "進行中",
         () => {
-          caseRecords.splice(index, 1);
-          museStore.write("cases", caseRecords);
-          renderCaseRecords();
-          showToast("已刪除案件暫存資料");
+          deleteRecord("cases", record, caseRecords, "cases", renderCaseRecords, "案件");
         }
       )));
     };
@@ -1921,10 +1934,7 @@
         "狀態：待處理。這筆資料目前只儲存在本機瀏覽器。",
         record.priority,
         () => {
-          taskRecords.splice(index, 1);
-          museStore.write("tasks", taskRecords);
-          renderTaskRecords();
-          showToast("已刪除待辦暫存資料");
+          deleteRecord("tasks", record, taskRecords, "tasks", renderTaskRecords, "待辦");
         }
       )));
     };
@@ -1969,10 +1979,7 @@
           `設計理念：${record.idea || "待補充"}`,
           record.publicStatus,
           () => {
-            portfolioRecords.splice(index, 1);
-            museStore.write("portfolio", portfolioRecords);
-            renderPortfolioRecords();
-            showToast("已刪除作品暫存資料");
+            deleteRecord("portfolios", record, portfolioRecords, "portfolio", renderPortfolioRecords, "作品");
           }
         );
         const draftButton = document.createElement("button");
@@ -1987,6 +1994,30 @@
         card.append(draftButton);
         return card;
       }));
+    };
+
+    const loadApiData = async (announce = true) => {
+      if (!apiEnabled()) return;
+      try {
+        const [customers, cases, tasks, portfolios] = await Promise.all([
+          apiRequest("/api/customers"), apiRequest("/api/cases"), apiRequest("/api/tasks"), apiRequest("/api/portfolios")
+        ]);
+        crmRecords = customers.items.map((item) => ({
+          ...item, size: item.size_range, budget: item.budget_range, summary: item.needs_summary, nextFollow: item.next_follow_up_at, status: item.status || "API"
+        }));
+        caseRecords = cases.items.map((item) => ({ ...item, next: item.next_action }));
+        taskRecords = tasks.items.map((item) => ({ ...item, name: item.title, owner: "API", due: item.due_at }));
+        portfolioRecords = portfolios.items.map((item) => ({
+          ...item, type: item.category, idea: item.design_idea, publicStatus: item.public_status
+        }));
+        renderCrmRecords();
+        renderCaseRecords();
+        renderTaskRecords();
+        renderPortfolioRecords();
+        if (announce) showToast("已從 API 載入資料");
+      } catch (error) {
+        if (announce) showToast(`API 資料載入失敗：${error.message}`);
+      }
     };
 
     document.getElementById("crm-form")?.addEventListener("submit", async (event) => {

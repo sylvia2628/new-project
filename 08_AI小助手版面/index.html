@@ -1,0 +1,1515 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUSE AI OS｜慕舍設計 AI 工作中心</title>
+  <style>
+    :root {
+      --bg: #f5f6f4;
+      --panel: #ffffff;
+      --ink: #202422;
+      --muted: #68716d;
+      --line: #d9ded9;
+      --green: #2f6b4f;
+      --rust: #a7553d;
+      --blue: #3d6c8f;
+      --gold: #9a7a31;
+      --soft-green: #e8f1eb;
+      --soft-rust: #f4ebe7;
+      --soft-blue: #e8eef3;
+      --soft-gold: #f3eedf;
+      --shadow: 0 12px 26px rgba(32, 36, 34, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: #202422;
+      color: #f8faf8;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 12px;
+    }
+
+    .brand img {
+      width: 148px;
+      max-width: 100%;
+      background: #fff;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 0;
+      color: #c4cbc6;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      color: #dfe6e1;
+      font-size: 14px;
+    }
+
+    .nav a.active,
+    .nav a:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+      font-size: 13px;
+      color: #c4cbc6;
+      line-height: 1.5;
+    }
+
+    .sidebar-footer a {
+      color: #ffffff;
+      word-break: break-word;
+    }
+
+    main {
+      min-width: 0;
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      padding-bottom: 4px;
+    }
+
+    .topbar h2 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      line-height: 1.2;
+    }
+
+    .topbar p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 760px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--green);
+      color: #ffffff;
+      border-color: var(--green);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      min-height: 112px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 30px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .metric small {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .section-body {
+      padding: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--ink);
+      background: var(--soft-green);
+      border: 1px solid #c9dccf;
+      white-space: nowrap;
+    }
+
+    .pill.rust {
+      background: var(--soft-rust);
+      border-color: #e2c9bf;
+    }
+
+    .pill.blue {
+      background: var(--soft-blue);
+      border-color: #c5d5df;
+    }
+
+    .pill.gold {
+      background: var(--soft-gold);
+      border-color: #ddd1aa;
+    }
+
+    .chat {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bubble {
+      max-width: 86%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      line-height: 1.55;
+      font-size: 14px;
+      border: 1px solid var(--line);
+      background: #f8faf8;
+    }
+
+    .bubble.user {
+      justify-self: start;
+    }
+
+    .bubble.ai {
+      justify-self: end;
+      background: var(--soft-green);
+      border-color: #c9dccf;
+    }
+
+    .reply-box {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 104px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      min-height: 40px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .board {
+      display: grid;
+      gap: 10px;
+    }
+
+    .lead {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: #fff;
+    }
+
+    .lead-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .lead h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .lead p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 13px;
+    }
+
+    .knowledge {
+      display: grid;
+      gap: 10px;
+    }
+
+    .fact {
+      display: grid;
+      grid-template-columns: 128px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .fact:last-child {
+      border-bottom: 0;
+    }
+
+    .fact b {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .portfolio {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .portfolio img {
+      width: 118px;
+      height: 92px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .portfolio div {
+      padding-right: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .portfolio h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .portfolio p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .links {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .link-card {
+      min-height: 92px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      align-content: space-between;
+      background: #fff;
+    }
+
+    .link-card strong {
+      font-size: 14px;
+    }
+
+    .link-card span {
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .remote-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .connection-map {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .connection-node {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      min-height: 104px;
+      padding: 14px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      position: relative;
+    }
+
+    .connection-node:not(:last-child)::after {
+      content: ">";
+      position: absolute;
+      right: -10px;
+      top: 42px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      z-index: 1;
+    }
+
+    .connection-node strong,
+    .prompt-card strong {
+      font-size: 14px;
+    }
+
+    .connection-node span,
+    .prompt-card span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .remote-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .status-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .status-item {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 10px;
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .status-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .status-item b {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .folder-chip {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      min-height: 42px;
+      padding: 9px 10px;
+      color: var(--muted);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .prompt-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .prompt-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .prompt-card code {
+      display: block;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: var(--ink);
+      background: #f8faf8;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .prompt-card .btn {
+      justify-self: start;
+    }
+
+    .sync-panel {
+      display: grid;
+      gap: 16px;
+    }
+
+    .sync-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .sync-toolbar p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    .sync-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .sync-metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      min-height: 96px;
+      padding: 13px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .sync-metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .sync-metric strong {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .sync-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .sync-block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .sync-block h4 {
+      margin: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 15px;
+    }
+
+    .sync-list {
+      display: grid;
+    }
+
+    .sync-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      gap: 10px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .sync-row:last-child {
+      border-bottom: 0;
+    }
+
+    .sync-row b {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .sync-row span {
+      overflow-wrap: anywhere;
+    }
+
+    .case-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px;
+    }
+
+    .case-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      background: #f8faf8;
+      border-radius: 999px;
+      min-height: 30px;
+      padding: 5px 10px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .case-tag em {
+      color: var(--muted);
+      font-style: normal;
+    }
+
+    .sync-table-wrap {
+      max-height: 420px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .sync-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      font-size: 13px;
+    }
+
+    .sync-table th,
+    .sync-table td {
+      padding: 10px 11px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+
+    .sync-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8faf8;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .sync-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    @media (max-width: 1120px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .nav {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .connection-map,
+      .remote-grid,
+      .sync-layout,
+      .sync-metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .connection-node:not(:last-child)::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 16px;
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .metrics,
+      .form-grid,
+      .links {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .fact {
+        grid-template-columns: 1fr;
+      }
+
+      .status-item,
+      .folder-grid,
+      .sync-row {
+        grid-template-columns: 1fr;
+      }
+
+      .portfolio {
+        grid-template-columns: 1fr;
+      }
+
+      .portfolio img {
+        width: 100%;
+        height: 180px;
+      }
+
+      .portfolio div {
+        padding: 0 12px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="https://mus-design.com.tw/images/header_logo.svg" alt="慕舍設計 logo">
+        <div>
+          <h1>MUSE AI OS</h1>
+          <p>AI 秘書、CRM、案場管理、作品管理與團隊協作工作中心</p>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="主要功能">
+        <a href="#overview" class="active"><span class="icon">秘</span>AI 秘書</a>
+        <a href="#crm"><span class="icon">客</span>CRM</a>
+        <a href="#cases"><span class="icon">案</span>案場管理</a>
+        <a href="#tasks"><span class="icon">工</span>工作待辦</a>
+        <a href="#reply-drafts"><span class="icon">回</span>AI 回覆</a>
+        <a href="#mobile-gpt"><span class="icon">手</span>手機連線</a>
+        <a href="#mobile-sync"><span class="icon">同</span>手機同步</a>
+        <a href="#portfolio"><span class="icon">作</span>作品管理</a>
+        <a href="#knowledge"><span class="icon">庫</span>知識庫</a>
+        <a href="#roles"><span class="icon">權</span>角色權限</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div>電話<br><a href="tel:+886987080331">+886 987 080331</a></div>
+        <div>地址<br>806 高雄市前鎮區竹內里英明一路72巷35號1F</div>
+      </div>
+    </aside>
+
+    <main>
+      <section class="topbar" id="overview">
+        <div>
+          <h2>AI 秘書首頁</h2>
+          <p>MUSE AI OS 是慕舍設計內部 AI 工作中心。AI 每天主動整理今日工作、本週工作、待回覆客戶、即將丈量、即將提案、即將完工、收付款提醒與待上架作品。</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="#mobile-gpt"><span class="icon">手</span>手機連線</a>
+          <a class="btn" href="#mobile-sync"><span class="icon">同</span>手機同步</a>
+          <a class="btn" href="https://rink.cc/tl6pb" target="_blank" rel="noreferrer"><span class="icon">L</span>LINE</a>
+          <a class="btn" href="https://www.instagram.com/musdesign2018/" target="_blank" rel="noreferrer"><span class="icon">IG</span>Instagram</a>
+          <a class="btn" href="https://maps.app.goo.gl/aTcmnBrFVMFdH6XR8" target="_blank" rel="noreferrer"><span class="icon">圖</span>Google</a>
+          <a class="btn primary" href="https://mus-design.com.tw/portfolio" target="_blank" rel="noreferrer"><span class="icon">作</span>作品欣賞</a>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="今日指標">
+        <div class="metric">
+          <span>今日工作</span>
+          <strong>18</strong>
+          <small>含設計、工務、行政與追蹤事項</small>
+        </div>
+        <div class="metric">
+          <span>待回覆客戶</span>
+          <strong>5</strong>
+          <small>AI 已產生追蹤訊息草稿</small>
+        </div>
+        <div class="metric">
+          <span>即將丈量 / 提案</span>
+          <strong>7</strong>
+          <small>本週需確認時程與資料</small>
+        </div>
+        <div class="metric">
+          <span>待上架作品</span>
+          <strong>3</strong>
+          <small>可產生官網與社群文案</small>
+        </div>
+      </section>
+
+      <section class="section" id="mobile-gpt">
+        <header>
+          <h3>手機 GPT 遠端連線</h3>
+          <span class="pill blue">第一階段可用</span>
+        </header>
+        <div class="section-body remote-panel">
+          <div class="connection-map" aria-label="手機 GPT 資料流">
+            <div class="connection-node">
+              <strong>手機 GPT</strong>
+              <span>用手機上傳 TimeTree、LINE 對話、現場照片或語音轉文字。</span>
+            </div>
+            <div class="connection-node">
+              <strong>同一個 AI 對話</strong>
+              <span>AI 先判斷資料類型，整理成行程、客戶、案件、待辦或作品素材。</span>
+            </div>
+            <div class="connection-node">
+              <strong>本機收件夾</strong>
+              <span>資料先歸到 09_手機上傳資料，再依類型放進對應子資料夾。</span>
+            </div>
+            <div class="connection-node">
+              <strong>MUSE AI OS</strong>
+              <span>更新 CRM、案場進度、工作待辦、回覆草稿與作品文案。</span>
+            </div>
+          </div>
+
+          <div class="remote-grid">
+            <div class="status-grid">
+              <div class="status-item"><b>連線方式</b><span>手機開啟目前這個 GPT 對話，上傳截圖、照片或直接貼文字。</span></div>
+              <div class="status-item"><b>收件路徑</b><span>09_手機上傳資料/99_待整理</span></div>
+              <div class="status-item"><b>可處理資料</b><span>行程截圖、LINE 對話、客戶資料、案件進度、作品素材、臨時工作。</span></div>
+              <div class="status-item"><b>安全界線</b><span>第一版只整理資料與產生草稿，不自動發送 LINE、社群貼文或客戶訊息。</span></div>
+              <div class="folder-grid" aria-label="手機收件分類">
+                <div class="folder-chip">01_行事曆截圖</div>
+                <div class="folder-chip">02_LINE對話截圖</div>
+                <div class="folder-chip">03_客戶資料</div>
+                <div class="folder-chip">04_案件進度</div>
+                <div class="folder-chip">05_作品素材</div>
+                <div class="folder-chip">99_待整理</div>
+              </div>
+            </div>
+
+            <div class="prompt-list" aria-label="手機 GPT 可用指令">
+              <div class="prompt-card">
+                <strong>行程整理</strong>
+                <span>貼在手機 GPT，並附上 TimeTree 截圖或文字。</span>
+                <code>這是今天或本週行程，請幫我整理到 MUSE AI OS：今日行程、本週提醒、需要追蹤的客戶、需要新增的工作。</code>
+                <button class="btn" type="button" data-copy="這是今天或本週行程，請幫我整理到 MUSE AI OS：今日行程、本週提醒、需要追蹤的客戶、需要新增的工作。"><span class="icon">複</span><span class="copy-state">複製</span></button>
+              </div>
+              <div class="prompt-card">
+                <strong>客戶對話整理</strong>
+                <span>貼在手機 GPT，並附上 LINE 對話截圖或客戶文字。</span>
+                <code>這是客戶 LINE 對話，請幫我整理：客戶需求摘要、尚缺資料、下一步追蹤、CRM 欄位、LINE 回覆草稿。不要直接發送。</code>
+                <button class="btn" type="button" data-copy="這是客戶 LINE 對話，請幫我整理：客戶需求摘要、尚缺資料、下一步追蹤、CRM 欄位、LINE 回覆草稿。不要直接發送。"><span class="icon">複</span><span class="copy-state">複製</span></button>
+              </div>
+              <div class="prompt-card">
+                <strong>案件進度更新</strong>
+                <span>貼在手機 GPT，並附上現場照片、紀錄或口述文字。</span>
+                <code>這是案件進度更新，請整理：案件名稱、目前階段、完成百分比、下一步、截止日、負責人、是否有延誤風險。</code>
+                <button class="btn" type="button" data-copy="這是案件進度更新，請整理：案件名稱、目前階段、完成百分比、下一步、截止日、負責人、是否有延誤風險。"><span class="icon">複</span><span class="copy-state">複製</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="mobile-sync">
+        <header>
+          <h3>手機同步資料</h3>
+          <span class="pill">已合併到專案</span>
+        </header>
+        <div class="section-body sync-panel">
+          <div class="sync-toolbar">
+            <p id="mobile-sync-intro">手機上傳資料會先進入收件夾，整理後同步到正式專案資料，再由網頁版小助手讀取。</p>
+            <div class="actions">
+              <a class="btn" id="mobile-sync-image" href="../09_手機上傳資料/01_行事曆截圖/2026-06_行事曆截圖.jpg"><span class="icon">圖</span>原始截圖</a>
+              <a class="btn" id="mobile-sync-csv" href="../04_客戶與案件追蹤/行程整理_2026-06_手機匯入.csv"><span class="icon">表</span>正式 CSV</a>
+              <a class="btn primary" id="mobile-sync-summary" href="../04_客戶與案件追蹤/行程整理_2026-06_手機匯入.md"><span class="icon">摘</span>整理摘要</a>
+            </div>
+          </div>
+
+          <div class="sync-metrics" aria-label="手機同步指標">
+            <div class="sync-metric">
+              <span>同步批次</span>
+              <strong id="sync-batch-count">-</strong>
+            </div>
+            <div class="sync-metric">
+              <span>行程筆數</span>
+              <strong id="sync-item-count">-</strong>
+            </div>
+            <div class="sync-metric">
+              <span>需補時間</span>
+              <strong id="sync-time-count">-</strong>
+            </div>
+            <div class="sync-metric">
+              <span>文字待確認</span>
+              <strong id="sync-text-count">-</strong>
+            </div>
+          </div>
+
+          <div class="sync-layout">
+            <div class="sync-block">
+              <h4>同步狀態</h4>
+              <div class="sync-list" id="sync-status-list">
+                <div class="sync-row"><b>狀態</b><span>等待資料載入</span></div>
+              </div>
+            </div>
+
+            <div class="sync-block">
+              <h4>重複出現案件</h4>
+              <div class="case-tags" id="sync-case-tags">
+                <span class="case-tag">等待資料載入</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sync-layout">
+            <div class="sync-block">
+              <h4>重點行程</h4>
+              <div class="sync-list" id="sync-highlight-list">
+                <div class="sync-row"><b>待載入</b><span>手機同步資料尚未讀取</span></div>
+              </div>
+            </div>
+
+            <div class="sync-block">
+              <h4>分類統計</h4>
+              <div class="case-tags" id="sync-category-tags">
+                <span class="case-tag">等待資料載入</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sync-toolbar">
+              <p>完整行程清單會保留「待確認」狀態，等時間與模糊文字補齊後再轉為正式排程。</p>
+              <span class="pill gold" id="sync-range">日期範圍待載入</span>
+            </div>
+            <div class="sync-table-wrap" aria-label="手機同步行程清單">
+              <table class="sync-table">
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>行程</th>
+                    <th>類型</th>
+                    <th>關聯案件</th>
+                    <th>提醒事項</th>
+                  </tr>
+                </thead>
+                <tbody id="sync-table-body">
+                  <tr>
+                    <td colspan="5">等待手機同步資料載入。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="section">
+          <header>
+            <h3>AI 主動摘要</h3>
+            <span class="pill">每日自動產生</span>
+          </header>
+          <div class="section-body board">
+            <article class="lead">
+              <div class="lead-top">
+                <h4>今日優先順序</h4>
+                <span class="pill rust">高</span>
+              </div>
+              <p>先處理 2 位待回覆客戶、1 件即將提案案件、1 件工程驗收確認與 1 筆尾款提醒。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>本週風險</h4>
+                <span class="pill gold">注意</span>
+              </div>
+              <p>有 2 個案場的施工圖截止日接近，1 個作品資料已完工但尚未整理照片與文案。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>管理者待審核</h4>
+                <span class="pill blue">草稿</span>
+              </div>
+              <p>AI 已產生 3 則客戶回覆、2 則 IG 文案與 1 則 Google 商家文章，等待確認後發布。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="section">
+          <header>
+            <h3>MVP 五大模組</h3>
+            <span class="pill blue">第一版</span>
+          </header>
+          <div class="section-body knowledge">
+            <div class="fact"><b>AI 秘書</b><span>每日工作摘要、逾期提醒、收付款提醒、待上架作品提醒。</span></div>
+            <div class="fact"><b>客戶 CRM</b><span>客戶資料、聊天摘要、追蹤訊息與未聯絡提醒。</span></div>
+            <div class="fact"><b>案場管理</b><span>初談、丈量、平面、3D、施工圖、估價、合約、工程、驗收、完工。</span></div>
+            <div class="fact"><b>工作待辦</b><span>任務指派、截止日期、完成狀態與 AI 提醒。</span></div>
+            <div class="fact"><b>作品管理</b><span>照片、CAD、平面圖、影片、設計理念與 AI 文案。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="section" id="line">
+          <header>
+            <h3>AI 客戶回覆審核</h3>
+            <span class="pill">管理者確認後發送</span>
+          </header>
+          <div class="section-body">
+            <div class="chat">
+              <div class="bubble user">您好，我想問高雄老屋翻新，設計費跟工期大概怎麼算？</div>
+              <div class="bubble ai">您好，慕舍設計的整體室內設計規劃費為 4500 元 / 坪，基本坪數 15 坪。若需丈量，丈量費 4500 元，可折抵設計費。大樓翻修設計圖約 1-2 個月，工程約 4-6 個月；透天翻修設計圖約 2-3 個月，工程約 8-12 個月，仍需以現況討論為主。</div>
+            </div>
+            <div class="reply-box">
+              <label for="reply">AI 建議回覆草稿</label>
+              <textarea id="reply">可以先提供案件地點、坪數、屋況、預算區間、是否有平面圖或現況照片，我們會協助初步判斷並安排公司諮詢。作品可先參考：https://mus-design.com.tw/portfolio</textarea>
+              <div class="actions">
+                <button class="btn primary" type="button"><span class="icon">核</span>確認後發送</button>
+                <button class="btn" type="button"><span class="icon">人</span>轉人工</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" id="crm">
+          <header>
+            <h3>客戶 CRM</h3>
+            <span class="pill blue">新詢問</span>
+          </header>
+          <div class="section-body">
+            <form class="form-grid">
+              <div class="field">
+                <label for="name">客戶姓名</label>
+                <input id="name" value="王小姐">
+              </div>
+              <div class="field">
+                <label for="phone">電話</label>
+                <input id="phone" value="09xx-xxx-xxx">
+              </div>
+              <div class="field">
+                <label for="area">地區</label>
+                <input id="area" value="高雄市左營區">
+              </div>
+              <div class="field">
+                <label for="type">裝修類型</label>
+                <select id="type">
+                  <option>老屋翻新</option>
+                  <option>新成屋</option>
+                  <option>預售屋</option>
+                  <option>商業空間</option>
+                  <option>建築空間</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="size">坪數</label>
+                <select id="size">
+                  <option>30 坪以下</option>
+                  <option>30-50 坪</option>
+                  <option>50 坪以上</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="budget">預算</label>
+                <select id="budget">
+                  <option>100-200 萬</option>
+                  <option>200-400 萬</option>
+                  <option>400 萬以上</option>
+                  <option>尚未確定</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="summary">需求摘要</label>
+                <textarea id="summary">想做奶油風老屋翻新，需要改善收納、採光與水電管線。</textarea>
+              </div>
+              <div class="field">
+                <label for="family">家庭成員</label>
+                <input id="family" value="夫妻、1 位小孩">
+              </div>
+              <div class="field">
+                <label for="nextFollow">下次追蹤</label>
+                <input id="nextFollow" value="2026-07-13">
+              </div>
+              <div class="field full">
+                <button class="btn primary" type="button"><span class="icon">建</span>建立案件</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="section" id="cases">
+          <header>
+            <h3>案場進度管理</h3>
+            <span class="pill rust">需追蹤</span>
+          </header>
+          <div class="section-body board">
+            <article class="lead">
+              <div class="lead-top">
+                <h4>林先生 / 新成屋裝修</h4>
+                <span class="pill blue">平面配置 35%</span>
+              </div>
+              <p>高雄鼓山，30-50 坪，偏好現代風。下一步：平面配置調整，截止日週五。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>陳小姐 / 大樓翻修</h4>
+                <span class="pill gold">估價 62%</span>
+              </div>
+              <p>大樓翻修，待確認工程估價與付款節點。AI 提醒：3 天未更新。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>周先生 / 商業空間</h4>
+                <span class="pill">工程 78%</span>
+              </div>
+              <p>商業空間，現場施工中。下一步：安排驗收前缺失整理。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" id="knowledge">
+          <header>
+            <h3>知識庫重點</h3>
+            <span class="pill">已確認</span>
+          </header>
+          <div class="section-body knowledge">
+            <div class="fact"><b>設計費</b><span>4500 元 / 坪，基本坪數 15 坪，未規劃區域不計費。</span></div>
+            <div class="fact"><b>丈量費</b><span>4500 元，可折抵設計費。</span></div>
+            <div class="fact"><b>監工費</b><span>新成屋總工程價 5%，舊屋翻修總工程價 8%。</span></div>
+            <div class="fact"><b>付款</b><span>工程付款分四期，追加減需雙方確認後施作。</span></div>
+            <div class="fact"><b>獎項</b><span>法國 NDA、美國 MUSE、義大利 A' Design 設計大獎。</span></div>
+            <div class="fact"><b>服務</b><span>住宅空間、商業空間、建築空間，以高雄為主。</span></div>
+            <div class="fact"><b>Google</b><span>商家類別為室內設計服務，公開評分 4.9。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid" id="tasks">
+        <div class="section">
+          <header>
+            <h3>工作 / 待辦管理</h3>
+            <span class="pill rust">AI 提醒</span>
+          </header>
+          <div class="section-body board">
+            <article class="lead">
+              <div class="lead-top">
+                <h4>聯上康橋施工圖</h4>
+                <span class="pill blue">設計師</span>
+              </div>
+              <p>截止日：本週三。狀態：進行中。AI 建議：今天確認水電配置。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>新文化城安提案</h4>
+                <span class="pill gold">助理</span>
+              </div>
+              <p>截止日：本週五。狀態：待整理簡報與風格參考。</p>
+            </article>
+            <article class="lead">
+              <div class="lead-top">
+                <h4>微笑城堡拍攝</h4>
+                <span class="pill">行政</span>
+              </div>
+              <p>狀態：待約攝影時間。AI 建議：同步確認可公開照片範圍。</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" id="reply-drafts">
+          <header>
+            <h3>AI 客戶回覆草稿</h3>
+            <span class="pill">待審核</span>
+          </header>
+          <div class="section-body knowledge">
+            <div class="fact"><b>初次詢問</b><span>整理客戶坪數、地區、屋況、預算與預計裝修時間，產生下一步詢問草稿。</span></div>
+            <div class="fact"><b>報價說明</b><span>依已確認規則說明設計費、丈量費、工程費另計與監工費，不自動承諾總價。</span></div>
+            <div class="fact"><b>丈量提醒</b><span>提醒客戶準備平面圖、現況照片、地址與可丈量時間。</span></div>
+            <div class="fact"><b>提案通知</b><span>協助整理提案時間、會議地點、需確認事項與客戶待回覆內容。</span></div>
+            <div class="fact"><b>工程通知</b><span>提供施工前提醒、現場注意事項、追加減確認與驗收前缺失整理。</span></div>
+            <div class="fact"><b>發送限制</b><span>所有 LINE、社群與客戶訊息都必須由管理者確認後才可發送。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="section" id="portfolio">
+          <header>
+            <h3>作品管理與 AI 文案</h3>
+            <span class="pill blue">待上架</span>
+          </header>
+          <div class="section-body board">
+            <article class="portfolio">
+              <img src="https://mus-design.com.tw/uploads/photo/uwnyb33kghsppqfvqhcg6vivu683g9.jpg" alt="純白透天翻修作品">
+              <div>
+                <h4>純白 / 透天翻修</h4>
+                <p>素材：施工前、施工後、影片。AI 可產生官網案例、IG 文案與短影音腳本。</p>
+              </div>
+            </article>
+            <article class="portfolio">
+              <img src="https://mus-design.com.tw/uploads/photo/7vn5g6w9vee478zyitj6daii85b4et.jpg" alt="奶茶系住宅設計作品">
+              <div>
+                <h4>奶茶系 / 住宅設計</h4>
+                <p>素材：完工照、平面圖。AI 可產生 Facebook 文案與 Google 商家文章。</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section" id="roles">
+          <header>
+            <h3>角色權限</h3>
+            <span class="pill gold">多人共用</span>
+          </header>
+          <div class="section-body knowledge">
+            <div class="fact"><b>管理者</b><span>所有資料、AI 草稿審核、使用者管理。</span></div>
+            <div class="fact"><b>設計師</b><span>自己案件、客戶、作品、待辦。</span></div>
+            <div class="fact"><b>助理</b><span>工作、行程、客戶基本資料、作品素材。</span></div>
+            <div class="fact"><b>工務</b><span>工程進度、施工圖、現場照片與工程待辦。</span></div>
+            <div class="fact"><b>財務</b><span>收款、付款、工程支出與第二階段毛利分析。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <header>
+          <h3>未來串接入口</h3>
+          <span class="pill">官方 API</span>
+        </header>
+        <div class="section-body links">
+            <a class="link-card" href="https://rink.cc/tl6pb" target="_blank" rel="noreferrer">
+              <strong>LINE</strong>
+              <span>https://rink.cc/tl6pb</span>
+            </a>
+            <a class="link-card" href="https://www.instagram.com/musdesign2018/" target="_blank" rel="noreferrer">
+              <strong>Instagram</strong>
+              <span>@musdesign2018</span>
+            </a>
+            <a class="link-card" href="https://www.facebook.com/profile.php?id=100063715037046" target="_blank" rel="noreferrer">
+              <strong>Facebook</strong>
+              <span>慕舍設計</span>
+            </a>
+            <a class="link-card" href="https://maps.app.goo.gl/aTcmnBrFVMFdH6XR8" target="_blank" rel="noreferrer">
+              <strong>Google Maps</strong>
+              <span>地址、導航與商家資訊</span>
+            </a>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="data/mobile-sync-data.js"></script>
+  <script>
+    const copyButtons = document.querySelectorAll("[data-copy]");
+
+    copyButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const text = button.dataset.copy || "";
+        const state = button.querySelector(".copy-state");
+        let copied = false;
+
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (error) {
+            copied = false;
+          }
+        }
+
+        if (!copied) {
+          const helper = document.createElement("textarea");
+          helper.value = text;
+          helper.setAttribute("readonly", "");
+          helper.style.position = "fixed";
+          helper.style.left = "-9999px";
+          document.body.appendChild(helper);
+          helper.select();
+          copied = document.execCommand("copy");
+          document.body.removeChild(helper);
+        }
+
+        state.textContent = copied ? "已複製" : "請手動選取";
+        window.setTimeout(() => {
+          state.textContent = "複製";
+        }, 1800);
+      });
+    });
+
+    const setText = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) {
+        node.textContent = value;
+      }
+    };
+
+    const replaceChildren = (id, children) => {
+      const node = document.getElementById(id);
+      if (!node) {
+        return;
+      }
+      node.replaceChildren(...children);
+    };
+
+    const makeRow = (label, value) => {
+      const row = document.createElement("div");
+      row.className = "sync-row";
+
+      const key = document.createElement("b");
+      key.textContent = label;
+
+      const text = document.createElement("span");
+      text.textContent = value || "-";
+
+      row.append(key, text);
+      return row;
+    };
+
+    const makeTag = (name, count) => {
+      const tag = document.createElement("span");
+      tag.className = "case-tag";
+
+      const label = document.createElement("span");
+      label.textContent = name;
+      tag.append(label);
+
+      if (count !== undefined) {
+        const number = document.createElement("em");
+        number.textContent = `${count} 筆`;
+        tag.append(number);
+      }
+
+      return tag;
+    };
+
+    const renderMobileSync = () => {
+      const data = window.MUSE_MOBILE_SYNC;
+      const batch = data?.batches?.[0];
+
+      if (!data || !batch) {
+        setText("mobile-sync-intro", "尚未找到手機同步資料檔，請確認 data/mobile-sync-data.js 是否存在。");
+        return;
+      }
+
+      setText("mobile-sync-intro", `${batch.title} 已從手機上傳資料合併到正式專案。來源：${data.source}，更新日：${data.lastUpdated}。`);
+      setText("sync-batch-count", data.batches.length);
+      setText("sync-item-count", batch.totalItems);
+      setText("sync-time-count", batch.needsTimeConfirm);
+      setText("sync-text-count", batch.needsTextConfirm);
+      setText("sync-range", batch.dateRange);
+
+      const imageLink = document.getElementById("mobile-sync-image");
+      const csvLink = document.getElementById("mobile-sync-csv");
+      const summaryLink = document.getElementById("mobile-sync-summary");
+
+      if (imageLink) imageLink.href = data.sourceImage;
+      if (csvLink) csvLink.href = data.sourceCsv;
+      if (summaryLink) summaryLink.href = data.sourceSummary;
+
+      replaceChildren("sync-status-list", [
+        makeRow("批次", batch.title),
+        makeRow("狀態", batch.status),
+        makeRow("日期範圍", batch.dateRange),
+        makeRow("正式資料", "04_客戶與案件追蹤/行程整理_2026-06_手機匯入.csv"),
+        makeRow("待補", "所有行程需補具體時間，截圖模糊文字需人工核對")
+      ]);
+
+      replaceChildren(
+        "sync-case-tags",
+        batch.repeatedCases.map((item) => makeTag(item.name, item.count))
+      );
+
+      replaceChildren(
+        "sync-category-tags",
+        Object.entries(batch.categoryCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => makeTag(name, count))
+      );
+
+      replaceChildren(
+        "sync-highlight-list",
+        batch.highlights.map((item) => makeRow(item.date, `${item.title}｜${item.type}`))
+      );
+
+      const tableRows = batch.items.map((item) => {
+        const row = document.createElement("tr");
+        ["日期", "行程名稱", "類型", "關聯案件", "提醒事項"].forEach((key) => {
+          const cell = document.createElement("td");
+          cell.textContent = item[key] || "-";
+          row.append(cell);
+        });
+        return row;
+      });
+
+      replaceChildren("sync-table-body", tableRows);
+    };
+
+    renderMobileSync();
+  </script>
+</body>
+</html>

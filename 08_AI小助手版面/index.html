@@ -1051,6 +1051,7 @@
         <a href="#portfolio"><span class="icon">作</span>作品管理</a>
         <a href="#knowledge"><span class="icon">庫</span>知識庫</a>
         <a href="#roles"><span class="icon">權</span>角色權限</a>
+        <a href="#settings"><span class="icon">設</span>連線設定</a>
       </nav>
 
       <div class="sidebar-footer">
@@ -1619,6 +1620,32 @@
         </div>
       </section>
 
+      <section class="section" id="settings">
+          <header>
+            <h3>API 連線設定</h3>
+            <span class="pill gold">開發模式</span>
+          </header>
+          <div class="section-body">
+            <p class="sync-toolbar p">沒有設定 API 時，資料只留在這個瀏覽器的開發暫存；設定 API 後，新增資料會送到受保護的後端。Token 只暫存在本次瀏覽器工作階段。</p>
+            <form class="form-grid" id="api-config-form">
+              <div class="field">
+                <label for="api-base">API 位址</label>
+                <input id="api-base" placeholder="http://127.0.0.1:8787">
+              </div>
+              <div class="field">
+                <label for="api-token">開發 Token</label>
+                <input id="api-token" type="password" autocomplete="off" placeholder="不會寫入 Git">
+              </div>
+              <div class="field full actions">
+                <button class="btn primary" type="submit"><span class="icon">存</span>儲存連線</button>
+                <button class="btn" type="button" id="api-test"><span class="icon">測</span>測試連線</button>
+                <button class="btn" type="button" id="api-clear"><span class="icon">清</span>清除設定</button>
+              </div>
+            </form>
+            <div class="fact" id="api-status"><b>連線狀態</b><span>尚未設定 API，使用本機預覽模式。</span></div>
+          </div>
+      </section>
+
       <section class="section">
         <header>
           <h3>未來串接入口</h3>
@@ -1701,6 +1728,43 @@
       }
     };
 
+    const API_CONFIG_KEY = "muse:api-config";
+    const readApiConfig = () => {
+      try {
+        return JSON.parse(sessionStorage.getItem(API_CONFIG_KEY) || "null") || { base: "", token: "" };
+      } catch (error) {
+        return { base: "", token: "" };
+      }
+    };
+    let apiConfig = readApiConfig();
+    const apiEnabled = () => Boolean(apiConfig.base && apiConfig.token);
+
+    const apiRequest = async (path, options = {}) => {
+      if (!apiEnabled()) throw new Error("API 尚未設定");
+      const response = await fetch(`${apiConfig.base.replace(/\/$/, "")}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiConfig.token}`,
+          ...(options.headers || {})
+        }
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || `API ${response.status}`);
+      return body;
+    };
+
+    const setApiStatus = (label, message) => {
+      const node = document.getElementById("api-status");
+      if (!node) return;
+      node.replaceChildren();
+      const key = document.createElement("b");
+      key.textContent = label;
+      const value = document.createElement("span");
+      value.textContent = message;
+      node.append(key, value);
+    };
+
     const showToast = (message) => {
       const toast = document.getElementById("toast");
       if (!toast) return;
@@ -1709,6 +1773,49 @@
       window.clearTimeout(showToast.timer);
       showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
     };
+
+    const apiBaseInput = document.getElementById("api-base");
+    const apiTokenInput = document.getElementById("api-token");
+    if (apiBaseInput) apiBaseInput.value = apiConfig.base;
+    if (apiEnabled()) setApiStatus("連線設定", `已設定 ${apiConfig.base}，尚未測試`);
+
+    document.getElementById("api-config-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      apiConfig = { base: apiBaseInput?.value.trim().replace(/\/$/, "") || "", token: apiTokenInput?.value.trim() || "" };
+      try {
+        sessionStorage.setItem(API_CONFIG_KEY, JSON.stringify(apiConfig));
+      } catch (error) {
+        showToast("瀏覽器不允許暫存連線設定");
+        return;
+      }
+      setApiStatus("連線設定", apiEnabled() ? `已設定 ${apiConfig.base}，請測試連線` : "尚未設定 API，使用本機預覽模式");
+      showToast(apiEnabled() ? "API 連線設定已暫存" : "已回到本機預覽模式");
+    });
+
+    document.getElementById("api-test")?.addEventListener("click", async () => {
+      if (!apiEnabled()) {
+        setApiStatus("連線狀態", "尚未設定 API，使用本機預覽模式");
+        showToast("請先填入 API 位址與 token");
+        return;
+      }
+      try {
+        const result = await apiRequest("/api/me");
+        setApiStatus("連線成功", `${result.user.display_name}｜${result.user.role}`);
+        showToast("API 連線成功");
+      } catch (error) {
+        setApiStatus("連線失敗", error.message);
+        showToast(`API 連線失敗：${error.message}`);
+      }
+    });
+
+    document.getElementById("api-clear")?.addEventListener("click", () => {
+      apiConfig = { base: "", token: "" };
+      sessionStorage.removeItem(API_CONFIG_KEY);
+      if (apiBaseInput) apiBaseInput.value = "";
+      if (apiTokenInput) apiTokenInput.value = "";
+      setApiStatus("連線狀態", "尚未設定 API，使用本機預覽模式");
+      showToast("已清除 API 連線設定");
+    });
 
     const rolePreviewData = {
       manager: { label: "管理者", allow: "全部資料、使用者管理、AI 草稿審核", deny: "無" },
@@ -1882,7 +1989,7 @@
       }));
     };
 
-    document.getElementById("crm-form")?.addEventListener("submit", (event) => {
+    document.getElementById("crm-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const record = {
         name: document.getElementById("name").value.trim(),
@@ -1900,13 +2007,27 @@
         showToast("請先填寫客戶姓名");
         return;
       }
+      if (apiEnabled()) {
+        try {
+          await apiRequest("/api/customers", { method: "POST", body: JSON.stringify({
+            name: record.name, phone: record.phone, area: record.area, type: record.type,
+            size_range: record.size, budget_range: record.budget, needs_summary: record.summary,
+            next_follow_up_at: record.nextFollow, status: "new"
+          }) });
+          event.target.reset();
+          showToast("已寫入 API 資料庫");
+        } catch (error) {
+          showToast(`CRM 寫入失敗：${error.message}`);
+        }
+        return;
+      }
       crmRecords.unshift(record);
       museStore.write("crm", crmRecords);
       renderCrmRecords();
       showToast("已建立 CRM 客戶（目前儲存在本機預覽）");
     });
 
-    document.getElementById("case-form")?.addEventListener("submit", (event) => {
+    document.getElementById("case-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const record = {
         name: document.getElementById("caseName").value.trim(),
@@ -1918,6 +2039,18 @@
         showToast("請先填寫案件名稱");
         return;
       }
+      if (apiEnabled()) {
+        try {
+          await apiRequest("/api/cases", { method: "POST", body: JSON.stringify({
+            name: record.name, stage: record.stage, progress: record.progress, next_action: record.next
+          }) });
+          event.target.reset();
+          showToast("已寫入 API 資料庫");
+        } catch (error) {
+          showToast(`案件寫入失敗：${error.message}`);
+        }
+        return;
+      }
       caseRecords.unshift(record);
       museStore.write("cases", caseRecords);
       renderCaseRecords();
@@ -1925,7 +2058,7 @@
       showToast("已建立案件（目前儲存在本機預覽）");
     });
 
-    document.getElementById("task-form")?.addEventListener("submit", (event) => {
+    document.getElementById("task-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const record = {
         name: document.getElementById("taskName").value.trim(),
@@ -1937,6 +2070,18 @@
         showToast("請先填寫工作名稱");
         return;
       }
+      if (apiEnabled()) {
+        try {
+          await apiRequest("/api/tasks", { method: "POST", body: JSON.stringify({
+            title: record.name, priority: record.priority, due_at: record.due, next_action: ""
+          }) });
+          event.target.reset();
+          showToast("已寫入 API 資料庫");
+        } catch (error) {
+          showToast(`待辦寫入失敗：${error.message}`);
+        }
+        return;
+      }
       taskRecords.unshift(record);
       museStore.write("tasks", taskRecords);
       renderTaskRecords();
@@ -1944,7 +2089,7 @@
       showToast("已建立待辦（目前儲存在本機預覽）");
     });
 
-    document.getElementById("portfolio-form")?.addEventListener("submit", (event) => {
+    document.getElementById("portfolio-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const record = {
         name: document.getElementById("portfolioName").value.trim(),
@@ -1956,6 +2101,19 @@
       };
       if (!record.name) {
         showToast("請先填寫作品名稱");
+        return;
+      }
+      if (apiEnabled()) {
+        try {
+          await apiRequest("/api/portfolios", { method: "POST", body: JSON.stringify({
+            name: record.name, category: record.type, style: record.style, size: record.size,
+            design_idea: record.idea, public_status: record.publicStatus
+          }) });
+          event.target.reset();
+          showToast("已寫入 API 資料庫");
+        } catch (error) {
+          showToast(`作品寫入失敗：${error.message}`);
+        }
         return;
       }
       portfolioRecords.unshift(record);

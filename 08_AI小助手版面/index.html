@@ -1317,8 +1317,9 @@
               <label for="reply">AI 建議回覆草稿</label>
               <textarea id="reply">可以先提供案件地點、坪數、屋況、預算區間、是否有平面圖或現況照片，我們會協助初步判斷並安排公司諮詢。作品可先參考：https://mus-design.com.tw/portfolio</textarea>
               <div class="actions">
-                <button class="btn primary" type="button"><span class="icon">核</span>確認後發送</button>
-                <button class="btn" type="button"><span class="icon">人</span>轉人工</button>
+                <button class="btn" type="button" id="copy-reply"><span class="icon">複</span>複製草稿</button>
+                <button class="btn primary" type="button" id="approve-reply"><span class="icon">核</span>標記已審核</button>
+                <button class="btn" type="button" id="human-reply"><span class="icon">人</span>轉人工</button>
               </div>
             </div>
           </div>
@@ -1535,6 +1536,35 @@
             <span class="pill blue">待上架</span>
           </header>
           <div class="section-body board">
+            <form class="form-grid" id="portfolio-form">
+              <div class="field">
+                <label for="portfolioName">作品名稱</label>
+                <input id="portfolioName" placeholder="例如：純白之家">
+              </div>
+              <div class="field">
+                <label for="portfolioType">作品類型</label>
+                <select id="portfolioType"><option>住宅</option><option>商業空間</option><option>建築空間</option></select>
+              </div>
+              <div class="field">
+                <label for="portfolioStyle">風格</label>
+                <input id="portfolioStyle" placeholder="現代簡約／日式無印">
+              </div>
+              <div class="field">
+                <label for="portfolioSize">坪數／地區</label>
+                <input id="portfolioSize" placeholder="32 坪｜高雄">
+              </div>
+              <div class="field full">
+                <label for="portfolioIdea">設計理念</label>
+                <textarea id="portfolioIdea" placeholder="改善採光、收納、動線與生活機能"></textarea>
+              </div>
+              <div class="field">
+                <label for="portfolioPublic">公開狀態</label>
+                <select id="portfolioPublic"><option>待確認</option><option>可公開</option><option>不可公開</option></select>
+              </div>
+              <div class="field">
+                <button class="btn primary" type="submit"><span class="icon">建</span>建立作品</button>
+              </div>
+            </form>
             <article class="portfolio">
               <img src="https://mus-design.com.tw/uploads/photo/uwnyb33kghsppqfvqhcg6vivu683g9.jpg" alt="純白透天翻修作品">
               <div>
@@ -1549,6 +1579,15 @@
                 <p>素材：完工照、平面圖。AI 可產生 Facebook 文案與 Google 商家文章。</p>
               </div>
             </article>
+            <div class="data-list" id="portfolio-records" aria-live="polite"></div>
+            <div class="reply-box">
+              <label for="portfolio-draft">AI 作品文案草稿</label>
+              <textarea id="portfolio-draft" placeholder="選擇作品後產生官網／社群文案草稿"></textarea>
+              <div class="actions">
+                <button class="btn" type="button" id="copy-portfolio-draft"><span class="icon">複</span>複製草稿</button>
+                <button class="btn primary" type="button" id="mark-portfolio-review"><span class="icon">審</span>送交審核</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1692,6 +1731,7 @@
     let crmRecords = museStore.read("crm");
     let caseRecords = museStore.read("cases");
     let taskRecords = museStore.read("tasks");
+    let portfolioRecords = museStore.read("portfolio");
 
     const renderCrmRecords = () => {
       const container = document.getElementById("crm-records");
@@ -1742,6 +1782,66 @@
           showToast("已刪除待辦暫存資料");
         }
       )));
+    };
+
+    const copyText = async (text) => {
+      if (!text) return false;
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (error) {
+          // Fall through to the browser-compatible copy method.
+        }
+      }
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "fixed";
+      helper.style.left = "-9999px";
+      document.body.appendChild(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(helper);
+      return copied;
+    };
+
+    const createPortfolioDraft = (record) => `【${record.name}｜${record.type}】
+
+慕舍設計以${record.style || "貼近生活需求的設計語彙"}，為${record.size || "高雄住宅空間"}重新整理空間機能與生活動線。
+
+設計重點：${record.idea || "依屋況與使用者需求調整採光、收納與空間比例。"}
+
+這個作品的完整設計與施工內容，將由慕舍設計團隊依現場條件、預算與需求進一步規劃。`;
+
+    const renderPortfolioRecords = () => {
+      const container = document.getElementById("portfolio-records");
+      if (!container) return;
+      container.replaceChildren(...portfolioRecords.map((record, index) => {
+        const card = makeRecordCard(
+          `${record.name}｜${record.type}`,
+          `${record.size || "地區待補"}｜${record.style || "風格待補"}`,
+          `設計理念：${record.idea || "待補充"}`,
+          record.publicStatus,
+          () => {
+            portfolioRecords.splice(index, 1);
+            museStore.write("portfolio", portfolioRecords);
+            renderPortfolioRecords();
+            showToast("已刪除作品暫存資料");
+          }
+        );
+        const draftButton = document.createElement("button");
+        draftButton.type = "button";
+        draftButton.className = "btn primary";
+        draftButton.textContent = "產生 AI 文案";
+        draftButton.addEventListener("click", () => {
+          const draft = document.getElementById("portfolio-draft");
+          if (draft) draft.value = createPortfolioDraft(record);
+          showToast("已產生作品文案草稿，請人工審核");
+        });
+        card.append(draftButton);
+        return card;
+      }));
     };
 
     document.getElementById("crm-form")?.addEventListener("submit", (event) => {
@@ -1806,9 +1906,60 @@
       showToast("已建立待辦（目前儲存在本機預覽）");
     });
 
+    document.getElementById("portfolio-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const record = {
+        name: document.getElementById("portfolioName").value.trim(),
+        type: document.getElementById("portfolioType").value,
+        style: document.getElementById("portfolioStyle").value.trim(),
+        size: document.getElementById("portfolioSize").value.trim(),
+        idea: document.getElementById("portfolioIdea").value.trim(),
+        publicStatus: document.getElementById("portfolioPublic").value
+      };
+      if (!record.name) {
+        showToast("請先填寫作品名稱");
+        return;
+      }
+      portfolioRecords.unshift(record);
+      museStore.write("portfolio", portfolioRecords);
+      renderPortfolioRecords();
+      event.target.reset();
+      showToast("已建立作品（目前儲存在本機預覽）");
+    });
+
+    document.getElementById("copy-portfolio-draft")?.addEventListener("click", async () => {
+      const draft = document.getElementById("portfolio-draft")?.value || "";
+      showToast(await copyText(draft) ? "作品文案已複製" : "目前沒有可複製的文案");
+    });
+
+    document.getElementById("mark-portfolio-review")?.addEventListener("click", () => {
+      const draft = document.getElementById("portfolio-draft")?.value || "";
+      if (!draft.trim()) {
+        showToast("請先產生或貼上作品文案");
+        return;
+      }
+      museStore.write("portfolioDraftReview", [{ text: draft, status: "待管理者審核", updatedAt: new Date().toISOString() }]);
+      showToast("已送入管理者審核佇列，尚未發布");
+    });
+
+    document.getElementById("copy-reply")?.addEventListener("click", async () => {
+      showToast(await copyText(document.getElementById("reply")?.value || "") ? "回覆草稿已複製" : "目前沒有可複製的回覆");
+    });
+
+    document.getElementById("approve-reply")?.addEventListener("click", () => {
+      museStore.write("replyReview", [{ text: document.getElementById("reply")?.value || "", status: "已審核、待正式發送", updatedAt: new Date().toISOString() }]);
+      showToast("已標記為審核完成；目前不會自動發送");
+    });
+
+    document.getElementById("human-reply")?.addEventListener("click", () => {
+      museStore.write("replyReview", [{ text: document.getElementById("reply")?.value || "", status: "轉人工處理", updatedAt: new Date().toISOString() }]);
+      showToast("已標記為轉人工處理");
+    });
+
     renderCrmRecords();
     renderCaseRecords();
     renderTaskRecords();
+    renderPortfolioRecords();
 
     const copyButtons = document.querySelectorAll("[data-copy]");
 

@@ -285,6 +285,15 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not user:
             return
         resource = urlparse(self.path).path[5:].strip("/")
+        if resource == "drafts/generate":
+            if not has_permission(user, "drafts.write"):
+                self.send_json(403, {"error": "forbidden", "required": "drafts.write"})
+                return
+            payload = self.body_json()
+            if payload is None:
+                return
+            self.generate_draft(user, payload)
+            return
         if resource == "drafts":
             permission = "drafts.write"
             table = "drafts"
@@ -298,6 +307,42 @@ class ApiHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         self.create_resource(user, table, payload)
+
+    def generate_draft(self, user, payload):
+        kind = str(payload.get("kind", "")).strip()
+        channel = str(payload.get("channel", "")).strip()
+        source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
+        if kind not in {"portfolio", "customer_reply", "case_summary", "social_post"} or not channel:
+            self.send_json(400, {"error": "invalid_draft_request", "required": ["kind", "channel"]})
+            return
+        name = str(source.get("name", "慕舍設計案件"))
+        style = str(source.get("style", "貼近生活需求的設計語彙"))
+        area = str(source.get("area", source.get("size", "高雄")))
+        idea = str(source.get("idea", source.get("needs_summary", "依屋況與使用者需求調整採光、收納與空間比例。")))
+        if kind == "portfolio":
+            content = "【%s】\n\n慕舍設計以%s，為%s重新整理空間機能與生活動線。\n\n設計重點：%s\n\n完整內容將由管理者確認後，再依頻道調整發布。" % (name, style, area, idea)
+        elif kind == "customer_reply":
+            content = "您好，感謝您聯繫慕舍設計。為了協助初步評估，請提供案件地點、坪數、屋況、預算區間、預計裝修時間，以及平面圖或現況照片。收到資料後，我們會由專人確認下一步。"
+        elif kind == "case_summary":
+            content = "案件：%s\n目前摘要：%s\n請確認目前階段、完成百分比、下一步工作與截止日。" % (name, idea)
+        else:
+            content = "慕舍設計｜%s\n\n%s\n\n發布前請確認作品公開狀態、客戶同意與圖片授權。" % (name, idea)
+        timestamp = now_iso()
+        fields = {
+            "kind": kind, "channel": channel, "source_type": str(payload.get("source_type", "")),
+            "source_id": payload.get("source_id"), "content": content, "status": "draft",
+            "created_by_ai": 1, "created_at": timestamp, "updated_at": timestamp
+        }
+        with DB_LOCK, db_connection() as connection:
+            cursor = connection.execute(
+                "INSERT INTO drafts(kind, channel, source_type, source_id, content, status, created_by_ai, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                tuple(fields[key] for key in ["kind", "channel", "source_type", "source_id", "content", "status", "created_by_ai", "created_at", "updated_at"]),
+            )
+            row = connection.execute("SELECT * FROM drafts WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            connection.commit()
+        result = row_json(row)
+        audit(user, "generate", "drafts", result["id"], after=result)
+        self.send_json(201, result)
 
     def do_PATCH(self):
         user = self.authenticate()

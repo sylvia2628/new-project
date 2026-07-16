@@ -21,6 +21,9 @@ curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/me
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/customers
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/audit_logs
 curl -H 'Authorization: Bearer local-manager' http://127.0.0.1:8787/api/assistant/today
+curl -X POST http://127.0.0.1:8787/api/drafts/generate \
+  -H 'Authorization: Bearer local-manager' -H 'Content-Type: application/json' \
+  -d '{"kind":"portfolio","channel":"instagram","source":{"name":"測試作品","style":"現代簡約","area":"高雄","idea":"改善採光與收納"}}'
 curl -X POST http://127.0.0.1:8787/api/customers \
   -H 'Authorization: Bearer local-manager' \
   -H 'Content-Type: application/json' \

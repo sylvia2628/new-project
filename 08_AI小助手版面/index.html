@@ -1896,6 +1896,8 @@
     let caseRecords = museStore.read("cases");
     let taskRecords = museStore.read("tasks");
     let portfolioRecords = museStore.read("portfolio");
+    let activePortfolioDraftId = null;
+    let activeReplyDraftId = null;
 
     const renderCrmRecords = () => {
       const container = document.getElementById("crm-records");
@@ -1961,13 +1963,23 @@
       return copied;
     };
 
-    const createPortfolioDraft = (record) => `【${record.name}｜${record.type}】
+    const createPortfolioDraft = async (record) => {
+      if (apiEnabled()) {
+        const result = await apiRequest("/api/drafts/generate", { method: "POST", body: JSON.stringify({
+          kind: "portfolio", channel: "multi_channel", source_type: "portfolio", source_id: record.id,
+          source: { name: record.name, style: record.style, area: record.size, idea: record.idea }
+        }) });
+        activePortfolioDraftId = result.id;
+        return result.content;
+      }
+      return `【${record.name}｜${record.type}】
 
 慕舍設計以${record.style || "貼近生活需求的設計語彙"}，為${record.size || "高雄住宅空間"}重新整理空間機能與生活動線。
 
 設計重點：${record.idea || "依屋況與使用者需求調整採光、收納與空間比例。"}
 
 這個作品的完整設計與施工內容，將由慕舍設計團隊依現場條件、預算與需求進一步規劃。`;
+    };
 
     const renderPortfolioRecords = () => {
       const container = document.getElementById("portfolio-records");
@@ -1986,10 +1998,14 @@
         draftButton.type = "button";
         draftButton.className = "btn primary";
         draftButton.textContent = "產生 AI 文案";
-        draftButton.addEventListener("click", () => {
-          const draft = document.getElementById("portfolio-draft");
-          if (draft) draft.value = createPortfolioDraft(record);
-          showToast("已產生作品文案草稿，請人工審核");
+        draftButton.addEventListener("click", async () => {
+          try {
+            const draft = document.getElementById("portfolio-draft");
+            if (draft) draft.value = await createPortfolioDraft(record);
+            showToast("已產生作品文案草稿，請人工審核");
+          } catch (error) {
+            showToast(`文案產生失敗：${error.message}`);
+          }
         });
         card.append(draftButton);
         return card;
@@ -2167,10 +2183,19 @@
       showToast(await copyText(draft) ? "作品文案已複製" : "目前沒有可複製的文案");
     });
 
-    document.getElementById("mark-portfolio-review")?.addEventListener("click", () => {
+    document.getElementById("mark-portfolio-review")?.addEventListener("click", async () => {
       const draft = document.getElementById("portfolio-draft")?.value || "";
       if (!draft.trim()) {
         showToast("請先產生或貼上作品文案");
+        return;
+      }
+      if (apiEnabled() && activePortfolioDraftId) {
+        try {
+          await apiRequest(`/api/drafts/${activePortfolioDraftId}`, { method: "PATCH", body: JSON.stringify({ status: "in_review", content: draft }) });
+          showToast("已送入 API 審核佇列，尚未發布");
+        } catch (error) {
+          showToast(`送審失敗：${error.message}`);
+        }
         return;
       }
       museStore.write("portfolioDraftReview", [{ text: draft, status: "待管理者審核", updatedAt: new Date().toISOString() }]);
@@ -2181,13 +2206,41 @@
       showToast(await copyText(document.getElementById("reply")?.value || "") ? "回覆草稿已複製" : "目前沒有可複製的回覆");
     });
 
-    document.getElementById("approve-reply")?.addEventListener("click", () => {
-      museStore.write("replyReview", [{ text: document.getElementById("reply")?.value || "", status: "已審核、待正式發送", updatedAt: new Date().toISOString() }]);
+    document.getElementById("approve-reply")?.addEventListener("click", async () => {
+      const text = document.getElementById("reply")?.value || "";
+      if (apiEnabled()) {
+        try {
+          if (!activeReplyDraftId) {
+            const created = await apiRequest("/api/drafts", { method: "POST", body: JSON.stringify({ kind: "customer_reply", channel: "line", content: text, status: "draft" }) });
+            activeReplyDraftId = created.id;
+          }
+          await apiRequest(`/api/drafts/${activeReplyDraftId}`, { method: "PATCH", body: JSON.stringify({ status: "approved", content: text }) });
+          showToast("已送入 API 審核完成狀態；目前不會自動發送");
+        } catch (error) {
+          showToast(`回覆審核失敗：${error.message}`);
+        }
+        return;
+      }
+      museStore.write("replyReview", [{ text, status: "已審核、待正式發送", updatedAt: new Date().toISOString() }]);
       showToast("已標記為審核完成；目前不會自動發送");
     });
 
-    document.getElementById("human-reply")?.addEventListener("click", () => {
-      museStore.write("replyReview", [{ text: document.getElementById("reply")?.value || "", status: "轉人工處理", updatedAt: new Date().toISOString() }]);
+    document.getElementById("human-reply")?.addEventListener("click", async () => {
+      const text = document.getElementById("reply")?.value || "";
+      if (apiEnabled()) {
+        try {
+          if (!activeReplyDraftId) {
+            const created = await apiRequest("/api/drafts", { method: "POST", body: JSON.stringify({ kind: "customer_reply", channel: "line", content: text, status: "draft" }) });
+            activeReplyDraftId = created.id;
+          }
+          await apiRequest(`/api/drafts/${activeReplyDraftId}`, { method: "PATCH", body: JSON.stringify({ status: "in_review", content: text }) });
+          showToast("已轉入 API 人工審核佇列");
+        } catch (error) {
+          showToast(`轉人工失敗：${error.message}`);
+        }
+        return;
+      }
+      museStore.write("replyReview", [{ text, status: "轉人工處理", updatedAt: new Date().toISOString() }]);
       showToast("已標記為轉人工處理");
     });
 

@@ -1,0 +1,14 @@
+services:
+  muse-api:
+    build: .
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      MUSE_DEV_TOKENS: "replace-in-local-env-only"
+      MUSE_CORS_ORIGIN: "http://localhost:8080"
+    volumes:
+      - muse_api_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  muse_api_data:
